@@ -1,4 +1,7 @@
 import os
+import random
+from dataclasses import dataclass
+
 import michie
 
 class BallState(michie.State):
@@ -8,7 +11,7 @@ class BallState(michie.State):
     @classmethod
     def init(cls):
         return BallState(
-            position=(0, 0),
+            position=(random.randint(0, cls.config()["height"]), 0),
             speed=(1, 1)
         )
 
@@ -35,7 +38,12 @@ Ball = michie.Object(
     transactions=[BallMoveTransaction],
 )
 
-world = michie.World()
+world = michie.World(
+    config=dict(
+        height=800,
+        width=600
+    )
+)
 
 world.add_object(Ball)
 

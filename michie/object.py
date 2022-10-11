@@ -1,9 +1,11 @@
+import multiprocessing
 import dataclasses
 
-#TODO: se rimane cosi questa è una dataclass
 class Object:
     def __init__(self, *, state, transactions):
-        assert dataclasses.is_dataclass(state), "Michie States must be dataclasses, use @dataclass decorator"
-        self.state = state
+        self.state = dataclasses.dataclass(state)
         self.transactions = transactions
+        self.config = None
     
+    def set_config(self, config):
+        self.config = config
