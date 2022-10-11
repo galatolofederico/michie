@@ -9,8 +9,8 @@ class RunnerState(michie.State):
     @classmethod
     def init(cls):
         return RunnerState(
-            position=random_from(cls.config["init"],.....)
-            ......
+            position=(0, 0),
+            speed=(1, 1)
         )
 
 class RunnerMoveTransaction(michie.Transaction):
@@ -31,23 +31,22 @@ class RunnerMoveTransaction(michie.Transaction):
                 wrap_y=(0, cls.config["world_height"]),
             )
         )
-    
-class RunnerSprite(michie.Sprite):
-    ....
+
+
+class NeighboursTick(michie.Tick):
+    @classmethod
+    def tick(cls, states):
+        positions = [state.position for state in states]
 
 
 Runner = michie.Object(
     state=RunnerState,
     transactions=[RunnerMoveTransaction],
-    sprite=RunnerSprite,
 )
-
 
 world = michie.World()
 
-world.add_object(Runner)
-world.add_object(Runner)
-world.add_object(Runner)
+world.add_objects(object=Runner, number=10)
 
 world.run(
     max_ticks=300,
