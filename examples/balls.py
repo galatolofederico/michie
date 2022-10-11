@@ -11,24 +11,30 @@ class BallState(michie.State):
     @classmethod
     def init(cls):
         return BallState(
-            position=(random.randint(0, cls.config()["height"]), 0),
-            speed=(1, 1)
+            position=(
+                random.randint(0, cls.config()["height"]), 
+                random.randint(0, cls.config()["height"])
+            ),
+            speed=(
+                random.randint(-5, 5),
+                random.randint(-5, 5)
+            )
         )
 
 class BallMoveTransaction(michie.Transaction):
     @classmethod
     def map(cls, state):
         return dict(
-            position=position,
-            speed=speed
+            position=state.position,
+            speed=state.speed
         )
     
     @classmethod
     def transact(cls, mapped_state):
         return dict(
             position=(
-                mapped_state["position"][0] + mapped_state["state"][0],
-                mapped_state["position"][1] + mapped_state["state"][1]
+                mapped_state["position"][0] + mapped_state["speed"][0],
+                mapped_state["position"][1] + mapped_state["speed"][1]
             )
         )
 
@@ -45,10 +51,10 @@ world = michie.World(
     )
 )
 
-world.add_object(Ball)
+world.add_objects(object=Ball, number=1)
 
 world.run(
-    max_ticks=300,
+    max_ticks=10,
     workers=os.cpu_count(),
     render=True
 )

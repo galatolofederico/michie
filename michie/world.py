@@ -16,16 +16,22 @@ class World:
 
         self.objects.append(object)
     
+    def add_objects(self, *, object, number):
+        for i in range(0, number):
+            self.add_object(object)
+    
     def run(
             self,
             *,
             workers,
-            max_ticks=-1,
+            max_ticks=100,
             render=False,
         ):
         
         initial_states = [object.state.init() for object in self.objects]
         self.states = multiprocessing.Manager().list(initial_states)
         
-        pool = multiprocessing.Pool(processes=workers)
-        pool.map(worker, self.states)
+        for i in range(0, max_ticks):
+            pool = multiprocessing.Pool(processes=workers)
+            results = pool.map_async(worker, zip(self.objects, self.states))
+            results.wait()
