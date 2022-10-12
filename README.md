@@ -1,4 +1,4 @@
-Large Scale Multi Agent Simulator with Memoized Idempotent Disjoint Transactions
+Large Scale Multi Agent Simulator with Memoized Idempotent Disjoint Transitions
 
 ===> michie
 

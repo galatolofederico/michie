@@ -1,0 +1,1 @@
+from michie.transitions.transition import Transition

@@ -3,29 +3,18 @@ import random
 from dataclasses import dataclass
 
 import michie
+from michie.utils.init import random_point, random_speed
 
-class BallState(michie.State):
-    def __init__(self, id, **kwargs):
-        super(BallState, self).__init__(**kwargs)
-        print(f"Randomly initializing ball #{id}")
+@dataclass
+class BallState(michie.states.MovingPoint):
+    color: str
 
-        self.update(dict(
-            position=(
-                random.randint(0, self.config["height"]), 
-                random.randint(0, self.config["height"])
-            ),
-            speed=(
-                random.randint(-5, 5),
-                random.randint(-5, 5)
-            )
-        ))
-
-class BallMoveTransaction(michie.Transaction):
+class BallMoveTransition(michie.Transition):
     @classmethod
     def map(cls, state):
         return dict(
-            position=state["position"],
-            speed=state["speed"]
+            position=state.position,
+            speed=state.speed
         )
     
     @classmethod
@@ -38,9 +27,19 @@ class BallMoveTransaction(michie.Transaction):
         )
 
 
+def add_ball(world, color):
+    state = random_point(bounds=dict(x=[0, 800], y=[0, 600]))
+    state.update(random_speed(bounds=dict(linear_speed=[0, 5], angular_speed=[0, 0.2])))
+    state.update(dict(color=color))
+
+    world.add_object(
+        object=Ball,
+        init=state
+    )
+
 Ball = michie.Object(
     state=BallState,
-    transactions=[BallMoveTransaction],
+    transitions=[BallMoveTransition],
 )
 
 world = michie.World(
@@ -50,7 +49,9 @@ world = michie.World(
     )
 )
 
-world.add_objects(object=Ball, number=1)
+add_ball(world, "red")
+add_ball(world, "blue")
+add_ball(world, "green")
 
 world.run(
     max_ticks=10,

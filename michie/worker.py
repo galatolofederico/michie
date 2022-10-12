@@ -1,12 +1,12 @@
 
 
 def worker(args):
-    state, transactions = args
+    state, transitions = args
     partial_updates = []
-    
-    for transaction in transactions:
-        mapped_state = transaction.map(state)
-        partial_update = transaction.transact(mapped_state)
+
+    for transition in transitions:
+        mapped_state = transition.map(state)
+        partial_update = transition.transact(mapped_state)
         state.update(partial_update)
     
     return state

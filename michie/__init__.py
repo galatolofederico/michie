@@ -1,9 +1,11 @@
 import michie.states
 import michie.ticks
-import michie.transactions
+import michie.transitions
+import michie.utils
+import michie.utils.init
 
 from michie.states import State
 from michie.ticks import Tick
-from michie.transactions import Transaction
+from michie.transitions import Transition
 from michie.object import Object
 from michie.world import World

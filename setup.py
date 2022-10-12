@@ -15,6 +15,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     install_requires=[
+        "tqdm==4.64.1"
     ],
     classifiers=[
         "Programming Language :: Python :: 3.8",

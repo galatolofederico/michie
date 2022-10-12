@@ -1,3 +1,4 @@
+from tqdm import trange
 import multiprocessing
 
 from michie.object import Object
@@ -6,28 +7,27 @@ from michie.worker import worker
 class World:
     def __init__(self, *, config=None):
         self.config = config
-        self.objects = []
+        self.states = []
+        self.transitions = []
     
-    def add_object(self, object):
+    def add_object(self, object, init):
         assert isinstance(object, Object), "You can only add michie.Object instances"
-        self.objects.append(object.factory(self))
-    
-    def add_objects(self, *, object, number):
-        for i in range(0, number):
-            self.add_object(object)
-    
+        state = object.state(**init)
+        transitions = [transition(world=self) for transition in object.transitions]
+
+        self.states.append(state)
+        self.transitions.append(transitions)
+
     def run(
             self,
             *,
             workers,
             max_ticks=100,
             render=False,
-        ):
-
-        states = [object.state.get() for object in self.objects]
-        transactions = [object.transactions for object in self.objects]        
+        ):   
         pool = multiprocessing.Pool(processes=workers)
-
-        for i in range(0, max_ticks):   
-            states = pool.map(worker, zip(states, transactions))
+        print(self.transitions)
+        for i in trange(0, max_ticks):   
+            states = pool.map(worker, zip(self.states, self.transitions))
             print(states)
+            exit()
