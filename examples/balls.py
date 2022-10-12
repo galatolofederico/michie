@@ -5,28 +5,27 @@ from dataclasses import dataclass
 import michie
 
 class BallState(michie.State):
-    position: tuple
-    speed: tuple
+    def __init__(self, id, **kwargs):
+        super(BallState, self).__init__(**kwargs)
+        print(f"Randomly initializing ball #{id}")
 
-    @classmethod
-    def init(cls):
-        return BallState(
+        self.update(dict(
             position=(
-                random.randint(0, cls.config()["height"]), 
-                random.randint(0, cls.config()["height"])
+                random.randint(0, self.config["height"]), 
+                random.randint(0, self.config["height"])
             ),
             speed=(
                 random.randint(-5, 5),
                 random.randint(-5, 5)
             )
-        )
+        ))
 
 class BallMoveTransaction(michie.Transaction):
     @classmethod
     def map(cls, state):
         return dict(
-            position=state.position,
-            speed=state.speed
+            position=state["position"],
+            speed=state["speed"]
         )
     
     @classmethod

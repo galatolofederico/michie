@@ -1,14 +1,16 @@
 from dataclasses import dataclass
 
-@dataclass
 class State:
-    @classmethod
-    def set_world(cls, world):
-        if not hasattr(cls, "world"):
-            cls.world = world
-        else:
-            assert cls.world == world, "Can only exist one michie world"
+    def __init__(self, world):
+        self.state = dict()
+        self.world = world
 
-    @classmethod
-    def config(cls):
-        return cls.world.config
+    def update(self, state):
+        self.state.update(state)
+    
+    def get(self):
+        return self.state.copy()
+
+    @property
+    def config(self):
+        return self.world.config

@@ -1,9 +1,9 @@
 
 
 class Transaction:
-    @classmethod
-    def set_world(cls, world):
-        if not hasattr(cls, "world"):
-            cls.world = world
-        else:
-            assert cls.world == world, "Can only exist one michie world"
+    def __init__(self, world):
+        self.world = world
+    
+    @property
+    def config(self):
+        return self.world.config
