@@ -6,8 +6,8 @@ class PointSprite:
         self.color = color
     
     def draw(self, *, window, state):
-        color = "black"
-        if hasattr(state, "color"): color = state.color
+        color = "white"
+        if "color" in state: color = state["color"]
         elif self.color is not None: color = self.color
         print(state)
-        pygame.draw.circle(window, color, state.position, self.radius)
+        pygame.draw.circle(window, color, state["position"]["position"], self.radius)
