@@ -9,23 +9,10 @@ from michie.utils.init import random_point, random_speed
 class BallState(michie.states.MovingPoint):
     color: str
 
-class BallMoveTransition(michie.Transition):
-    @classmethod
-    def map(cls, state):
-        return dict(
-            position=state.position,
-            speed=state.speed
-        )
-    
-    @classmethod
-    def transact(cls, mapped_state):
-        return dict(
-            position=(
-                mapped_state["position"][0] + mapped_state["speed"][0],
-                mapped_state["position"][1] + mapped_state["speed"][1]
-            )
-        )
-
+Ball = michie.Object(
+    state=BallState,
+    transitions=[michie.transitions.MoveTransition],
+)
 
 def add_ball(world, color):
     state = random_point(bounds=dict(x=[0, 800], y=[0, 600]))
@@ -37,10 +24,7 @@ def add_ball(world, color):
         init=state
     )
 
-Ball = michie.Object(
-    state=BallState,
-    transitions=[BallMoveTransition],
-)
+
 
 world = michie.World(
     config=dict(

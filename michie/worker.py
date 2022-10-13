@@ -8,5 +8,5 @@ def worker(args):
         mapped_state = transition.map(state)
         partial_update = transition.transact(mapped_state)
         state.update(partial_update)
-    
+
     return state
