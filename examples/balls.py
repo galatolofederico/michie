@@ -6,13 +6,18 @@ import michie
 from michie.utils.init import random_position, random_speed
 
 @dataclass
-class BallState(michie.states.MovingPoint):
-    color: str
+class BallState(michie.State):
+    @staticmethod
+    def schema():
+        schema = dict()
+        schema.update(michie.states.MovingPoint.schema())
+        schema.update(dict(color=str))
+        return schema
 
 Ball = michie.Object(
     state=BallState,
     transitions=[michie.transitions.MoveTransition],
-    sprites=[michie.sprites.PointSprite(radius=10)]
+    sprites=[michie.sprites.PointSprite(radius=10), michie.sprites.HeadingSprite()]
 )
 
 def add_ball(world, color):
@@ -42,5 +47,6 @@ world.run(
     max_ticks=1000,
     workers=os.cpu_count(),
     render=True,
+    render_fps=30,
     render_surface=(800, 600)
 )

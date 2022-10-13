@@ -9,7 +9,7 @@ class World:
     def __init__(self, *, config=None):
         self.config = config
         self.objects = []
-        self.states = []
+        self.dict_states = []
         self.transitions = dict()
         self.transitions_ids = []
         self.window = None
@@ -17,7 +17,8 @@ class World:
     
     def add_object(self, *, object, init):
         assert isinstance(object, Object), "You can only add michie.Object instances"
-        state = object.state(**init)
+        schema = object.state.validate(init)
+
         transitions_ids = []
         for transition in object.transitions:
             if not transition.__name__ in self.transitions:
@@ -26,7 +27,7 @@ class World:
         self.transitions_ids.append(transitions_ids)
 
         self.objects.append(object)
-        self.states.append(state)
+        self.dict_states.append(init)
 
     def transitions_tick(self, *, submit_queue, results_queue):
         assert submit_queue.empty() and results_queue.empty()
@@ -38,17 +39,17 @@ class World:
         updated_states = sorted(updated_states, key=lambda e: e[0])
         self.dict_states = tuple(map(lambda e: e[1], updated_states))
         
-        #TODO: opt-in: check conformità state con definizioni...
-        #self.states = [object.state(**state) for object, state in zip(self.objects, updated_states)]
+        #TODO: opt-in: rivalidare stati ad ogni tick...
         assert submit_queue.empty() and results_queue.empty()
 
-    def render(self, *, window, background="black"):
+    def render(self, *, window, clock, fps=30, background="black"):
         import pygame
         window.fill(background)
         sprites = [object.sprites for object in self.objects]
         for state, object_sprites in zip(self.dict_states, sprites):
             for object_sprite in object_sprites: object_sprite.draw(window=window, state=state)
         pygame.display.flip()
+        if clock is not None: clock.tick(fps)
 
     def run(
             self,
@@ -57,12 +58,16 @@ class World:
             max_ticks=100,
             render=False,
             render_surface=(800, 600),
+            render_fps=None,
             render_background="black"
         ):   
         if render:
             import pygame
             pygame.init()
             window = pygame.display.set_mode(render_surface, pygame.HWSURFACE | pygame.DOUBLEBUF)
+            clock = None
+            if render_fps is not None:
+                clock = pygame.time.Clock()
 
         submit_queue = multiprocessing.Queue()
         results_queue = multiprocessing.Queue()
@@ -75,10 +80,14 @@ class World:
             ) for _ in range(0, workers)]
         [worker.start() for worker in workers]
 
-        self.dict_states = [dataclasses.asdict(state) for state in self.states]
         for i in trange(0, max_ticks):
             self.transitions_tick(submit_queue=submit_queue, results_queue=results_queue)
-            if render: self.render(window=window, background=render_background)
+            if render: self.render(
+                window=window,
+                clock=clock,
+                fps=render_fps,
+                background=render_background
+            )
         
         for i in range(0, len(workers)):
             submit_queue.put(["exit", None, (None, None)])

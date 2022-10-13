@@ -9,5 +9,4 @@ class PointSprite:
         color = "white"
         if "color" in state: color = state["color"]
         elif self.color is not None: color = self.color
-        print(state)
         pygame.draw.circle(window, color, state["position"]["position"], self.radius)
