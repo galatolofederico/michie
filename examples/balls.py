@@ -24,8 +24,6 @@ def add_ball(world, color):
         init=state
     )
 
-
-
 world = michie.World(
     config=dict(
         height=800,
@@ -40,5 +38,6 @@ add_ball(world, "green")
 world.run(
     max_ticks=10,
     workers=os.cpu_count(),
-    render=True
+    render=True,
+    render_surface=(800, 600)
 )

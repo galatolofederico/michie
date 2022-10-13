@@ -1,6 +1,7 @@
 import dataclasses
 from tqdm import trange
 import multiprocessing
+import pygame
 
 from michie.object import Object
 from michie.worker import worker
@@ -11,6 +12,8 @@ class World:
         self.objects = []
         self.states = []
         self.transitions = []
+        self.window = None
+        self.render_surface = None
     
     def add_object(self, object, init):
         assert isinstance(object, Object), "You can only add michie.Object instances"
@@ -34,7 +37,13 @@ class World:
             workers,
             max_ticks=100,
             render=False,
+            render_surface=(800, 600)
         ):   
+        if render:
+            self.render_surface = render_surface
+            pygame.init()
+            self.window = pygame.display.set_mode(self.render_surface, pygame.HWSURFACE | pygame.DOUBLEBUF)
+
         pool = multiprocessing.Pool(processes=workers)
         for i in trange(0, max_ticks):
             self.transitions_tick(pool)

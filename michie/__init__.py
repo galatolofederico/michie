@@ -1,6 +1,7 @@
 import michie.states
 import michie.ticks
 import michie.transitions
+import michie.sprites
 import michie.utils
 import michie.utils.init
 
