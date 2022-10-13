@@ -38,6 +38,6 @@ add_ball(world, "green")
 world.run(
     max_ticks=10,
     workers=os.cpu_count(),
-    render=True,
+    render=False,
     render_surface=(800, 600)
 )
