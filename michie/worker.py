@@ -11,6 +11,7 @@ class Worker(multiprocessing.Process):
         while True:
             msg, id, (state, transitions_ids) = self.submit_queue.get()
             if msg == "exit": return
+            
             transitions = map(lambda t: self.transitions[t], transitions_ids)
             partial_updates = []
 

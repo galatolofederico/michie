@@ -16,7 +16,8 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=[
         "tqdm==4.64.1",
-        "pygame==2.1.2"
+        "pygame==2.1.2",
+        "numpy==1.23.4"
     ],
     classifiers=[
         "Programming Language :: Python :: 3.8",

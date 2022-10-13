@@ -1,7 +1,6 @@
 import dataclasses
 from tqdm import trange
 import multiprocessing
-import pygame
 
 from michie.object import Object
 from michie.worker import Worker
@@ -44,18 +43,27 @@ class World:
         self.states = [object.state(**state) for object, state in zip(self.objects, updated_states)]
         assert submit_queue.empty() and results_queue.empty()
 
+    def render(self, *, window, background="black"):
+        import pygame
+        window.fill(background)
+        sprites = [object.sprites for object in self.objects]
+        for state, object_sprites in zip(self.states, sprites):
+            for object_sprite in object_sprites: object_sprite.draw(window=window, state=state)
+        pygame.display.flip()
+
     def run(
             self,
             *,
             workers,
             max_ticks=100,
             render=False,
-            render_surface=(800, 600)
+            render_surface=(800, 600),
+            render_background="black"
         ):   
         if render:
-            self.render_surface = render_surface
+            import pygame
             pygame.init()
-            self.window = pygame.display.set_mode(self.render_surface, pygame.HWSURFACE | pygame.DOUBLEBUF)
+            window = pygame.display.set_mode(render_surface, pygame.HWSURFACE | pygame.DOUBLEBUF)
 
         submit_queue = multiprocessing.Queue()
         results_queue = multiprocessing.Queue()
@@ -70,6 +78,7 @@ class World:
 
         for i in trange(0, max_ticks):
             self.transitions_tick(submit_queue=submit_queue, results_queue=results_queue)
+            if render: self.render(window=window, background=render_background)
         
         for i in range(0, len(workers)):
             submit_queue.put(["exit", None, (None, None)])

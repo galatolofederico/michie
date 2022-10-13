@@ -3,7 +3,7 @@ import random
 from dataclasses import dataclass
 
 import michie
-from michie.utils.init import random_point, random_speed
+from michie.utils.init import random_position, random_speed
 
 @dataclass
 class BallState(michie.states.MovingPoint):
@@ -12,16 +12,19 @@ class BallState(michie.states.MovingPoint):
 Ball = michie.Object(
     state=BallState,
     transitions=[michie.transitions.MoveTransition],
+    sprites=[michie.sprites.PointSprite(radius=10)]
 )
 
 def add_ball(world, color):
-    state = random_point(bounds=dict(x=[0, 800], y=[0, 600]))
-    state.update(random_speed(bounds=dict(linear_speed=[0, 5], angular_speed=[0, 0.2])))
-    state.update(dict(color=color))
+    state = dict(
+        position=random_position(bounds=dict(x=[0, 800], y=[0, 600])),
+        speed=random_speed(bounds=dict(linear_speed=[0, 5], angular_speed=[0, 0.2])),
+        color=color
+    )
 
     world.add_object(
         object=Ball,
-        init=state
+        init=state,
     )
 
 world = michie.World(
@@ -36,8 +39,8 @@ add_ball(world, "blue")
 add_ball(world, "green")
 
 world.run(
-    max_ticks=10,
+    max_ticks=1000,
     workers=os.cpu_count(),
-    render=False,
+    render=True,
     render_surface=(800, 600)
 )

@@ -1,6 +1,6 @@
 import random
 
-def random_point(*, bounds):
+def random_position(*, bounds):
     return dict(
         position=(
             random.uniform(*bounds["x"]),

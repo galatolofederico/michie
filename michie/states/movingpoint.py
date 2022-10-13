@@ -1,12 +1,10 @@
 from dataclasses import dataclass
 
-from michie.states.point import Point
+from michie.states.state import State
+from michie.states.position import Position
+from michie.states.speed import Speed
 
 @dataclass
-class Speed:
-    linear: float
-    angular: float
-
-@dataclass
-class MovingPoint(Point):
+class MovingPoint(State):
+    position: Position
     speed: Speed

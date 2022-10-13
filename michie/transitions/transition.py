@@ -1,9 +1,10 @@
 
 
 class Transition:
-    def __init__(self, world):
-        self.world = world
+    @classmethod
+    def map(cls, state):
+        raise NotImplementedError
     
-    @property
-    def config(self):
-        return self.world.config
+    @classmethod
+    def transact(cls, mapped_state):
+        raise NotImplementedError
