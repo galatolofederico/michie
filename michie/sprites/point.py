@@ -1,7 +1,7 @@
 import pygame
 
 class PointSprite:
-    def __init__(self, radius, color=None):
+    def __init__(self, radius=None, color=None):
         self.radius = radius
         self.color = color
     
@@ -9,4 +9,9 @@ class PointSprite:
         color = "white"
         if "color" in state: color = state["color"]
         elif self.color is not None: color = self.color
-        pygame.draw.circle(window, color, state["position"]["position"], self.radius)
+
+        radius = 5
+        if "radius" in state: radius = state["radius"]
+        elif self.radius is not None: radius = self.radius
+
+        pygame.draw.circle(window, color, state["position"]["position"], radius)

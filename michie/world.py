@@ -10,7 +10,7 @@ class World:
         self.config = config
         self.global_mappers = global_mappers
         self.state_mappers = state_mappers
-        self.global_state = dict()
+        self.global_state = dict(tick=0)
         self.objects = []
         self.dict_states = []
         self.transitions = dict()
@@ -20,6 +20,7 @@ class World:
     
     def add_object(self, *, object, init):
         assert isinstance(object, Object), "You can only add michie.Object instances"
+        init["type"] = object.name
         schema = object.state.validate(init)
 
         transitions_ids = []
@@ -126,7 +127,8 @@ class World:
             
             self.map_states(submit_queue=submit_queue, results_queue=results_queue)
             self.transitions_tick(submit_queue=submit_queue, results_queue=results_queue)
-            
+            self.global_state["tick"] += 1
+
             if render: self.render(
                 window=window,
                 clock=clock,

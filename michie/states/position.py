@@ -5,9 +5,11 @@ from michie.states.state import State
 class Position(State):
     @staticmethod
     def schema():
-        return dict(
+        schema = State.schema()
+        schema.update(dict(
             position = dict(
                 position = tuple,
                 heading = float
             )
-        )
+        ))
+        return schema

@@ -26,11 +26,11 @@ class Worker(multiprocessing.Process):
         
         return state
 
-    def state_map(self, *, state, global_state):
+    def state_map(self, *, id, state, global_state):
         partial_updates = []
 
         for state_mapper in self.state_mappers:
-            mapped_state = state_mapper.map(state, global_state)
+            mapped_state = state_mapper.map(id, state, global_state)
             state.update(mapped_state)
         
         return state
@@ -43,6 +43,7 @@ class Worker(multiprocessing.Process):
                 return
             if work["type"] == Works.STATE_MAP:
                 result = self.state_map(
+                    id = work["args"]["id"],
                     state = work["args"]["state"],
                     global_state = work["args"]["global_state"]
                 )

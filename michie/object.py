@@ -2,7 +2,8 @@ import multiprocessing
 import dataclasses
 
 class Object:
-    def __init__(self, *, state, transitions=[], sprites=[]):
+    def __init__(self, *, name, state, transitions=[], sprites=[]):
+        self.name = name
         self.state = state
         self.transitions = transitions
         self.sprites = sprites

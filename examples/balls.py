@@ -9,12 +9,13 @@ from michie.utils.init import random_position, random_speed
 class BallState(michie.State):
     @staticmethod
     def schema():
-        schema = dict()
+        schema = michie.State.schema()
         schema.update(michie.states.MovingPoint.schema())
         schema.update(dict(color=str))
         return schema
 
 Ball = michie.Object(
+    name="Ball",
     state=BallState,
     transitions=[michie.transitions.MoveTransition],
     sprites=[michie.sprites.PointSprite(radius=10), michie.sprites.HeadingSprite()]
@@ -39,9 +40,9 @@ world = michie.World(
     )
 )
 
-add_ball(world, "red")
-add_ball(world, "blue")
-add_ball(world, "green")
+for _ in range(0, 15): add_ball(world, "red")
+for _ in range(0, 15): add_ball(world, "green")
+for _ in range(0, 15): add_ball(world, "blue")
 
 world.run(
     max_ticks=1000,

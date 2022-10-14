@@ -1,12 +1,17 @@
-from michie.mappers.statemapper import StateMapper
+import numpy as np
+import scipy.spatial.distance
 
+from michie.mappers.globalmapper import GlobalMapper
 
-def NeighboursStateMapperFactory(radius):
-    class NeighboursStateMapper(StateMapper):
-        @classmethod
-        def map(self, state, global_state):
-            return state
+class NeighboursGlobalMapper(GlobalMapper):
+    def __init__(self, radius):
+        self.radius = radius
     
-    NeighboursStateMapper.__name__ = f"NeighboursStateMapper_{radius}"
+    def map(self, states, global_state):
+        for id, (state, dists) in enumerate(zip(states, global_state["distances"])):
+            other_dists = np.concatenate((dists[:id], dists[id+1:]))
+            other_states = states[:id] + states[id+1:]
 
-    return NeighboursStateMapper
+            state["neighbours"] = [state for id, state in enumerate(other_states) if other_dists[id] <= self.radius]
+
+        return states

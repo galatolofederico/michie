@@ -5,7 +5,7 @@ from michie.states.speed import Speed
 class MovingPoint(State):
     @staticmethod
     def schema():
-        schema = dict()
+        schema = State.schema()
         schema.update(Position.schema())
         schema.update(Speed.schema())
         return schema
