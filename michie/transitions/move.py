@@ -30,3 +30,20 @@ class MoveTransition(Transition):
         mapped_state["position"]["heading"] = theta_k1
         
         return mapped_state
+
+
+def WrappedMoveTransitionFactory(bounds):
+    class WrappedMoveTransition(Transition):
+        @classmethod
+        def map(cls, state):
+            return MoveTransition.map(state)
+        
+        @classmethod
+        def transact(cls, mapped_state):
+            mapped_state = MoveTransition.transact(mapped_state)
+            mapped_state["position"]["position"] = (
+                mapped_state["position"]["position"][0] % bounds[0],
+                mapped_state["position"]["position"][1] % bounds[1],
+            )
+            return mapped_state
+    return WrappedMoveTransition

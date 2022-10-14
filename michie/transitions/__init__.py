@@ -1,2 +1,2 @@
 from michie.transitions.transition import Transition
-from michie.transitions.move import MoveTransition
+from michie.transitions.move import MoveTransition, WrappedMoveTransitionFactory

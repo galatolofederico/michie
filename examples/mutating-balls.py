@@ -16,8 +16,8 @@ class BallState(michie.State):
 
 Ball = michie.Object(
     state=BallState,
-    transitions=[michie.transitions.MoveTransition],
-    sprites=[michie.sprites.PointSprite(radius=10), michie.sprites.HeadingSprite()]
+    transitions=[michie.transitions.WrappedMoveTransitionFactory([800, 600])],
+    sprites=[michie.sprites.PointSprite(radius=10)]
 )
 
 def add_ball(world, color):
