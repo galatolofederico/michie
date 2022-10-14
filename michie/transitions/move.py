@@ -46,4 +46,7 @@ def WrappedMoveTransitionFactory(bounds):
                 mapped_state["position"]["position"][1] % bounds[1],
             )
             return mapped_state
+    
+    WrappedMoveTransition.__name__ = f"WrappedMoveTransition_{bounds[0]}_{bounds[1]}"
+    
     return WrappedMoveTransition

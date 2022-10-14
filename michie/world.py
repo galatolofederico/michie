@@ -6,9 +6,10 @@ from michie.object import Object
 from michie.worker import Worker, Works
 
 class World:
-    def __init__(self, *, global_mappers=[], config=None):
+    def __init__(self, *, global_mappers=[], state_mappers=[], config=None):
         self.config = config
         self.global_mappers = global_mappers
+        self.state_mappers = state_mappers
         self.global_state = dict()
         self.objects = []
         self.dict_states = []
@@ -60,6 +61,24 @@ class World:
             submit_queue=submit_queue,
             results_queue=results_queue
         )
+    
+    def map_states(self, *, submit_queue, results_queue):
+        works = []        
+        for id, state in enumerate(self.dict_states):
+            works.append(dict(
+                type = Works.STATE_MAP,
+                args = dict(
+                    id = id,
+                    state = state,
+                    global_state = self.global_state
+                )
+            ))
+        
+        self.dict_states = self.run_works(
+            works=works,
+            submit_queue=submit_queue,
+            results_queue=results_queue
+        )
         
     def render(self, *, window, clock, fps=30, background="black"):
         import pygame
@@ -95,6 +114,7 @@ class World:
             Worker(
                 submit_queue=submit_queue,
                 results_queue=results_queue,
+                state_mappers=self.state_mappers,
                 transitions=self.transitions
             ) for _ in range(0, workers)
         ]
@@ -104,6 +124,7 @@ class World:
             for global_mapper in self.global_mappers:
                 self.dict_states = global_mapper.map(self.dict_states, self.global_state)
             
+            self.map_states(submit_queue=submit_queue, results_queue=results_queue)
             self.transitions_tick(submit_queue=submit_queue, results_queue=results_queue)
             
             if render: self.render(

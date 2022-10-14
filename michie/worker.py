@@ -3,14 +3,16 @@ from enum import Enum
 
 class Works(Enum):
     EXIT = 0
-    STATE_TRANSITION = 1
+    STATE_MAP = 1
+    STATE_TRANSITION = 2
 
 
 class Worker(multiprocessing.Process):
-    def __init__(self, *, submit_queue, results_queue, transitions):
+    def __init__(self, *, submit_queue, results_queue, state_mappers, transitions):
         super(Worker, self).__init__()
         self.submit_queue = submit_queue
         self.results_queue = results_queue
+        self.state_mappers = state_mappers
         self.transitions = transitions
     
     def state_transition(self, *, state, transitions_ids):
@@ -24,12 +26,26 @@ class Worker(multiprocessing.Process):
         
         return state
 
+    def state_map(self, *, state, global_state):
+        partial_updates = []
+
+        for state_mapper in self.state_mappers:
+            mapped_state = state_mapper.map(state, global_state)
+            state.update(mapped_state)
+        
+        return state
+
     def run(self):
         while True:
             work = self.submit_queue.get()
             result = None
             if work["type"] == Works.EXIT:
                 return
+            if work["type"] == Works.STATE_MAP:
+                result = self.state_map(
+                    state = work["args"]["state"],
+                    global_state = work["args"]["global_state"]
+                )
             if work["type"] == Works.STATE_TRANSITION:
                 result = self.state_transition(
                     state = work["args"]["state"],

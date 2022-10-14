@@ -10,5 +10,6 @@ from michie.states import State
 from michie.ticks import Tick
 from michie.transitions import Transition
 from michie.mappers.globalmapper import GlobalMapper
+from michie.mappers.statemapper import StateMapper
 from michie.object import Object
 from michie.world import World

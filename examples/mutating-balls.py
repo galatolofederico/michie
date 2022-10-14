@@ -33,7 +33,8 @@ def add_ball(world, color):
     )
 
 world = michie.World(
-    global_mappers=[michie.mappers.DistancesGlobalMapper()]
+    global_mappers=[michie.mappers.DistancesGlobalMapper()],
+    state_mappers=[michie.mappers.NeighboursStateMapperFactory(radius=100)]
 )
 
 add_ball(world, "red")
