@@ -94,7 +94,8 @@ class World:
                 submit_queue=submit_queue,
                 results_queue=results_queue,
                 transitions=self.transitions
-            ) for _ in range(0, workers)]
+            ) for _ in range(0, workers)
+        ]
         [worker.start() for worker in workers]
 
         for i in trange(0, max_ticks):
