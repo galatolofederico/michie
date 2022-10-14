@@ -1,0 +1,2 @@
+from michie.mappers.globalmapper import GlobalMapper
+from michie.mappers.distances import DistancesGlobalMapper

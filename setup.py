@@ -18,7 +18,8 @@ setuptools.setup(
         "tqdm==4.64.1",
         "pygame==2.1.2",
         "numpy==1.23.4",
-        "schema==0.7.5"
+        "schema==0.7.5",
+        "scipy==1.9.2"
     ],
     classifiers=[
         "Programming Language :: Python :: 3.8",

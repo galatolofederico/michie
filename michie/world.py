@@ -6,8 +6,10 @@ from michie.object import Object
 from michie.worker import Worker, Works
 
 class World:
-    def __init__(self, *, config=None):
+    def __init__(self, *, global_mappers=[], config=None):
         self.config = config
+        self.global_mappers = global_mappers
+        self.global_state = dict()
         self.objects = []
         self.dict_states = []
         self.transitions = dict()
@@ -99,7 +101,11 @@ class World:
         [worker.start() for worker in workers]
 
         for i in trange(0, max_ticks):
+            for global_mapper in self.global_mappers:
+                self.dict_states = global_mapper.map(self.dict_states, self.global_state)
+            
             self.transitions_tick(submit_queue=submit_queue, results_queue=results_queue)
+            
             if render: self.render(
                 window=window,
                 clock=clock,
