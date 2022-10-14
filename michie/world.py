@@ -3,7 +3,7 @@ from tqdm import trange
 import multiprocessing
 
 from michie.object import Object
-from michie.worker import Worker
+from michie.worker import Worker, Works
 
 class World:
     def __init__(self, *, config=None):
@@ -28,20 +28,37 @@ class World:
 
         self.objects.append(object)
         self.dict_states.append(init)
+    
+    def run_works(self, *, works, submit_queue, results_queue):
+        assert submit_queue.empty() and results_queue.empty()
+        
+        [submit_queue.put(work) for work in works]
+        
+        results = [results_queue.get() for i in range(0, len(works))]
+        results = sorted(results, key=lambda e: e["id"])
+        results = tuple(map(lambda e: e["result"], results))
+        
+        assert submit_queue.empty() and results_queue.empty()
+        return results
 
     def transitions_tick(self, *, submit_queue, results_queue):
-        assert submit_queue.empty() and results_queue.empty()
-        
+        works = []        
         for id, (state, transitions_ids) in enumerate(zip(self.dict_states, self.transitions_ids)):
-            submit_queue.put(["work", id, (state, transitions_ids)])
+            works.append(dict(
+                type = Works.STATE_TRANSITION,
+                args = dict(
+                    id = id,
+                    state = state,
+                    transitions_ids = transitions_ids
+                )
+            ))
         
-        updated_states = [results_queue.get() for i in range(0, len(self.objects))]
-        updated_states = sorted(updated_states, key=lambda e: e[0])
-        self.dict_states = tuple(map(lambda e: e[1], updated_states))
+        self.dict_states = self.run_works(
+            works=works,
+            submit_queue=submit_queue,
+            results_queue=results_queue
+        )
         
-        #TODO: opt-in: rivalidare stati ad ogni tick...
-        assert submit_queue.empty() and results_queue.empty()
-
     def render(self, *, window, clock, fps=30, background="black"):
         import pygame
         window.fill(background)
@@ -90,4 +107,6 @@ class World:
             )
         
         for i in range(0, len(workers)):
-            submit_queue.put(["exit", None, (None, None)])
+            submit_queue.put(dict(
+                type=Works.EXIT
+            ))
