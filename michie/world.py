@@ -9,10 +9,11 @@ class World:
     def __init__(self, *, global_mappers=[], state_mappers=[], config=None):
         self.config = config
         self.global_mappers = global_mappers
-        self.state_mappers = state_mappers
         self.global_state = dict(tick=0)
         self.objects = []
         self.dict_states = []
+        self.state_mappers = dict()
+        self.state_mappers_ids = []
         self.transitions = dict()
         self.transitions_ids = []
         self.window = None
@@ -29,6 +30,13 @@ class World:
                 self.transitions[transition.__name__] = transition
             transitions_ids.append(transition.__name__)
         self.transitions_ids.append(transitions_ids)
+
+        state_mappers_ids = []
+        for transition in object.state_mappers:
+            if not transition.__name__ in self.state_mappers:
+                self.state_mappers[transition.__name__] = transition
+            state_mappers_ids.append(transition.__name__)
+        self.state_mappers_ids.append(state_mappers_ids)
 
         self.objects.append(object)
         self.dict_states.append(init)
@@ -65,13 +73,14 @@ class World:
     
     def map_states(self, *, submit_queue, results_queue):
         works = []        
-        for id, state in enumerate(self.dict_states):
+        for id, (state, state_mappers_ids) in enumerate(zip(self.dict_states, self.state_mappers_ids)):
             works.append(dict(
                 type = Works.STATE_MAP,
                 args = dict(
                     id = id,
                     state = state,
-                    global_state = self.global_state
+                    global_state = self.global_state,
+                    state_mappers_ids = state_mappers_ids
                 )
             ))
         

@@ -1,3 +1,4 @@
+import pygame
 import os
 import random
 from dataclasses import dataclass
@@ -6,11 +7,10 @@ from collections import Counter
 import michie
 from michie.utils.init import random_position, random_speed
 
-@dataclass
 class BallState(michie.State):
     @staticmethod
     def schema():
-        schema = dict()
+        schema = michie.State.schema()
         schema.update(michie.states.MovingPoint.schema())
         schema.update(dict(color=str))
         return schema
@@ -35,6 +35,13 @@ class FilterNeighboursMapper(michie.StateMapper):
         state["neighbours"] = list(filter(lambda n: n["type"] == "FixedBall", state["neighbours"]))
         return state
 
+class NeighboursRadiusSprite(michie.Sprite):
+    def __init__(self, radius):
+        self.radius = radius
+    
+    def draw(self, *, window, state):
+        pygame.draw.circle(window, "white", state["position"]["position"], self.radius, 1)
+
 FixedBall = michie.Object(
     name="FixedBall",
     state=BallState,
@@ -47,11 +54,17 @@ FixedBall = michie.Object(
 MutatingBall = michie.Object(
     name="MutatingBall",
     state=BallState,
+    state_mappers=[
+        FilterNeighboursMapper
+    ],
     transitions=[
         michie.transitions.WrappedMoveTransitionFactory([800, 600]),
         MutateTransition
     ],
-    sprites=[michie.sprites.PointSprite(radius=10)]
+    sprites=[
+        michie.sprites.PointSprite(radius=10),
+        NeighboursRadiusSprite(radius=100)
+    ]
 )
 
 def add_fixed_ball(world, color):
@@ -83,9 +96,6 @@ world = michie.World(
         michie.mappers.DistancesGlobalMapper(),
         michie.mappers.NeighboursGlobalMapper(radius=100)
     ],
-    state_mappers=[
-        FilterNeighboursMapper
-    ]
 )
 
 for _ in range(0, 5): add_mutating_ball(world)
