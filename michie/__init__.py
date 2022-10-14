@@ -14,3 +14,4 @@ from michie.mappers.statemapper import StateMapper
 from michie.object import Object
 from michie.sprites.sprite import Sprite
 from michie.world import World
+from michie.factory import factory

@@ -46,7 +46,7 @@ FixedBall = michie.Object(
     name="FixedBall",
     state=BallState,
     transitions=[
-        michie.transitions.WrappedMoveTransitionFactory([800, 600])
+        michie.transitions.WrappedMoveTransitionFactory(bounds=[800, 600])
     ],
     sprites=[michie.sprites.PointSprite(radius=3)]
 )
@@ -58,7 +58,7 @@ MutatingBall = michie.Object(
         FilterNeighboursMapper
     ],
     transitions=[
-        michie.transitions.WrappedMoveTransitionFactory([800, 600]),
+        michie.transitions.WrappedMoveTransitionFactory(bounds=[800, 600]),
         MutateTransition
     ],
     sprites=[

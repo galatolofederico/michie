@@ -1,6 +1,7 @@
 import numpy as np
 
 from michie.transitions.transition import Transition
+from michie.factory import factory
 
 class MoveTransition(Transition):
     @classmethod
@@ -32,21 +33,17 @@ class MoveTransition(Transition):
         return mapped_state
 
 
-def WrappedMoveTransitionFactory(bounds):
-    class WrappedMoveTransition(Transition):
-        @classmethod
-        def map(cls, state):
-            return MoveTransition.map(state)
-        
-        @classmethod
-        def transact(cls, mapped_state):
-            mapped_state = MoveTransition.transact(mapped_state)
-            mapped_state["position"]["position"] = (
-                mapped_state["position"]["position"][0] % bounds[0],
-                mapped_state["position"]["position"][1] % bounds[1],
-            )
-            return mapped_state
+@factory
+class WrappedMoveTransitionFactory(Transition):
+    @classmethod
+    def map(cls, state):
+        return MoveTransition.map(state)
     
-    WrappedMoveTransition.__name__ = f"WrappedMoveTransition_{bounds[0]}_{bounds[1]}"
-    
-    return WrappedMoveTransition
+    @classmethod
+    def transact(cls, mapped_state):
+        mapped_state = MoveTransition.transact(mapped_state)
+        mapped_state["position"]["position"] = (
+            mapped_state["position"]["position"][0] % cls.args["bounds"][0],
+            mapped_state["position"]["position"][1] % cls.args["bounds"][1],
+        )
+        return mapped_state
