@@ -7,14 +7,6 @@ from collections import Counter
 import michie
 from michie.utils.init import random_position, random_speed
 
-class BallState(michie.State):
-    @staticmethod
-    def schema():
-        schema = michie.State.schema()
-        schema.update(michie.states.MovingPoint.schema())
-        schema.update(dict(color=str))
-        return schema
-
 class MutateTransition(michie.Transition):
     @classmethod
     def map(cls, state):
@@ -42,54 +34,51 @@ class NeighboursRadiusSprite(michie.Sprite):
     def draw(self, *, window, state):
         pygame.draw.circle(window, "white", state["position"]["position"], self.radius, 1)
 
-FixedBall = michie.Object(
-    name="FixedBall",
-    state=BallState,
-    transitions=[
-        michie.transitions.WrappedMoveTransitionFactory(bounds=[800, 600])
-    ],
-    sprites=[michie.sprites.PointSprite(radius=3)]
-)
 
-MutatingBall = michie.Object(
-    name="MutatingBall",
-    state=BallState,
-    state_mappers=[
-        FilterNeighboursMapper
-    ],
-    transitions=[
-        michie.transitions.WrappedMoveTransitionFactory(bounds=[800, 600]),
-        MutateTransition
-    ],
-    sprites=[
-        michie.sprites.PointSprite(radius=10),
-        NeighboursRadiusSprite(radius=100)
-    ]
-)
 
 def add_fixed_ball(world, color):
-    state = dict(
-        position=random_position(bounds=dict(x=[0, 800], y=[0, 600])),
-        speed=random_speed(bounds=dict(linear_speed=[0, 5], angular_speed=[0, 0])),
+    init = dict(
+        **random_position(bounds=dict(x=[0, 800], y=[0, 600])),
+        **random_speed(bounds=dict(linear_speed=[0, 5], angular_speed=[0, 0])),
         color=color
     )
 
-    world.add_object(
-        object=FixedBall,
-        init=state,
+    FixedBall = michie.Object(
+        name="FixedBall",
+        init=init,
+        transitions=[
+            michie.transitions.WrappedMoveTransitionFactory(bounds=[800, 600])
+        ],
+        sprites=[michie.sprites.PointSprite(radius=3)]
     )
 
+    world.add_object(FixedBall)
+
 def add_mutating_ball(world):
-    state = dict(
-        position=random_position(bounds=dict(x=[0, 800], y=[0, 600])),
-        speed=random_speed(bounds=dict(linear_speed=[0, 5], angular_speed=[0, 0])),
+    init = dict(
+        **random_position(bounds=dict(x=[0, 800], y=[0, 600])),
+        **random_speed(bounds=dict(linear_speed=[0, 5], angular_speed=[0, 0])),
         color="white"
     )
 
-    world.add_object(
-        object=MutatingBall,
-        init=state,
+    MutatingBall = michie.Object(
+        name="MutatingBall",
+        init=init,
+        state_mappers=[
+            FilterNeighboursMapper
+        ],
+        transitions=[
+            michie.transitions.WrappedMoveTransitionFactory(bounds=[800, 600]),
+            MutateTransition
+        ],
+        sprites=[
+            michie.sprites.PointSprite(radius=10),
+            NeighboursRadiusSprite(radius=100)
+        ]
     )
+
+
+    world.add_object(MutatingBall)
 
 world = michie.World(
     global_mappers=[

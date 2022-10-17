@@ -1,4 +1,5 @@
 import multiprocessing
+import orjson
 from enum import Enum
 
 class Works(Enum):
@@ -39,22 +40,25 @@ class Worker(multiprocessing.Process):
     def run(self):
         while True:
             work = self.submit_queue.get()
+            #work = orjson.loads(work)
+            #print(work)
             result = None
-            if work["type"] == Works.EXIT:
+            if work["type"] == Works.EXIT.value:
                 return
-            if work["type"] == Works.STATE_MAP:
+            if work["type"] == Works.STATE_MAP.value:
                 result = self.state_map(
                     id = work["args"]["id"],
                     state = work["args"]["state"],
+                    #global_state = orjson.loads(work["args"]["global_state"]),
                     global_state = work["args"]["global_state"],
                     state_mappers_ids = work["args"]["state_mappers_ids"]
                 )
-            if work["type"] == Works.STATE_TRANSITION:
+            if work["type"] == Works.STATE_TRANSITION.value:
                 result = self.state_transition(
                     state = work["args"]["state"],
                     transitions_ids = work["args"]["transitions_ids"]
                 )
-        
+            
             self.results_queue.put(dict(
                 id=work["args"]["id"],
                 result=result

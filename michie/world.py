@@ -1,6 +1,7 @@
 import dataclasses
 from tqdm import trange
 import multiprocessing
+import orjson
 
 from michie.object import Object
 from michie.worker import Worker, Works
@@ -19,10 +20,9 @@ class World:
         self.window = None
         self.render_surface = None
     
-    def add_object(self, *, object, init):
+    def add_object(self, object):
         assert isinstance(object, Object), "You can only add michie.Object instances"
-        init["type"] = object.name
-        schema = object.state.validate(init)
+        object.init["type"] = object.name
 
         transitions_ids = []
         for transition in object.transitions:
@@ -39,13 +39,13 @@ class World:
         self.state_mappers_ids.append(state_mappers_ids)
 
         self.objects.append(object)
-        self.dict_states.append(init)
+        self.dict_states.append(object.init)
     
     def run_works(self, *, works, submit_queue, results_queue):
         assert submit_queue.empty() and results_queue.empty()
+        #[submit_queue.put(orjson.dumps(work, option=orjson.OPT_SERIALIZE_NUMPY).decode("utf-8")) for work in works]
         
         [submit_queue.put(work) for work in works]
-        
         results = [results_queue.get() for i in range(0, len(works))]
         results = sorted(results, key=lambda e: e["id"])
         results = tuple(map(lambda e: e["result"], results))
@@ -57,7 +57,7 @@ class World:
         works = []        
         for id, (state, transitions_ids) in enumerate(zip(self.dict_states, self.transitions_ids)):
             works.append(dict(
-                type = Works.STATE_TRANSITION,
+                type = Works.STATE_TRANSITION.value,
                 args = dict(
                     id = id,
                     state = state,
@@ -72,10 +72,11 @@ class World:
         )
     
     def map_states(self, *, submit_queue, results_queue):
-        works = []        
+        works = []
+        #global_state = orjson.dumps(self.global_state, option=orjson.OPT_SERIALIZE_NUMPY).decode("utf-8")
         for id, (state, state_mappers_ids) in enumerate(zip(self.dict_states, self.state_mappers_ids)):
             works.append(dict(
-                type = Works.STATE_MAP,
+                type = Works.STATE_MAP.value,
                 args = dict(
                     id = id,
                     state = state,
@@ -83,13 +84,17 @@ class World:
                     state_mappers_ids = state_mappers_ids
                 )
             ))
-        
+
         self.dict_states = self.run_works(
             works=works,
             submit_queue=submit_queue,
             results_queue=results_queue
         )
-        
+
+    def global_map_states(self):
+        for global_mapper in self.global_mappers:
+            self.dict_states = global_mapper.map(self.dict_states, self.global_state) 
+
     def render(self, *, window, clock, fps=30, background="black"):
         import pygame
         window.fill(background)
@@ -131,9 +136,7 @@ class World:
         [worker.start() for worker in workers]
 
         for i in trange(0, max_ticks):
-            for global_mapper in self.global_mappers:
-                self.dict_states = global_mapper.map(self.dict_states, self.global_state)
-            
+            self.global_map_states()
             self.map_states(submit_queue=submit_queue, results_queue=results_queue)
             self.transitions_tick(submit_queue=submit_queue, results_queue=results_queue)
             self.global_state["tick"] += 1
@@ -147,5 +150,5 @@ class World:
         
         for i in range(0, len(workers)):
             submit_queue.put(dict(
-                type=Works.EXIT
+                type=Works.EXIT.value
             ))

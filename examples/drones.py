@@ -6,14 +6,6 @@ from dataclasses import dataclass
 import michie
 from michie.utils.init import random_position, random_speed
 
-class DroneState(michie.State):
-    @staticmethod
-    def schema():
-        schema = michie.State.schema()
-        schema.update(michie.states.MovingPoint.schema())
-        schema.update(dict(color=str))
-        return schema
-
 class RandomSpeedChange(michie.Transition):
     @classmethod
     def map(cls, state):
@@ -31,29 +23,26 @@ class RandomSpeedChange(michie.Transition):
         
         return state
 
-Drone = michie.Object(
-    name="Drone",
-    state=DroneState,
-    transitions=[
-        michie.transitions.MoveTransition,
-        RandomSpeedChange
-    ],
-    sprites=[
-        michie.sprites.DroneSprite(width=20, height=30)
-    ]
-)
-
 def add_drone(world, color):
-    state = dict(
-        position=random_position(bounds=dict(x=[0, 800], y=[0, 600])),
-        speed=random_speed(bounds=dict(linear_speed=[0, 5], angular_speed=[-0.2, 0.2])),
+    init = dict(
+        **random_position(bounds=dict(x=[0, 800], y=[0, 600])),
+        **random_speed(bounds=dict(linear_speed=[0, 5], angular_speed=[-0.2, 0.2])),
         color=color
     )
 
-    world.add_object(
-        object=Drone,
-        init=state,
+    Drone = michie.Object(
+        name="Drone",
+        init=init,
+        transitions=[
+            michie.transitions.MoveTransition,
+            RandomSpeedChange
+        ],
+        sprites=[
+            michie.sprites.DroneSprite(width=20, height=30)
+        ]
     )
+
+    world.add_object(Drone)
 
 world = michie.World(
     config=dict(

@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.spatial.distance
+import copy
 
 from michie.mappers.globalmapper import GlobalMapper
 
@@ -12,6 +13,11 @@ class NeighboursGlobalMapper(GlobalMapper):
             other_dists = np.concatenate((dists[:id], dists[id+1:]))
             other_states = states[:id] + states[id+1:]
 
-            state["neighbours"] = [state for id, state in enumerate(other_states) if other_dists[id] <= self.radius]
+            state["neighbours"] = []
+            for id, other_state in enumerate(other_states):
+                if other_dists[id] <= self.radius:
+                    nstate = other_state.copy()
+                    nstate["neighbours"] = None
+                    state["neighbours"].append(nstate)
 
         return states
