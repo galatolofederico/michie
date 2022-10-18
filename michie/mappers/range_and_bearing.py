@@ -2,7 +2,15 @@ from michie.mappers.statemapper import StateMapper
 
 class RangeAndBearingStateMapper(StateMapper):
     @classmethod
-    def map(cls, state):
+    def requirements(cls, state):
+        return "neighbours" in state and "position" in state
+    
+    @classmethod
+    def map_global_state(cls, global_state):
+        return dict()
+
+    @classmethod
+    def map_state(cls, state):
         return dict(
             position=state["position"],
             neighbours=state["neighbours"]
