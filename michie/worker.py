@@ -9,8 +9,9 @@ class Works(Enum):
 
 
 class Worker(multiprocessing.Process):
-    def __init__(self, *, submit_queue, results_queue, state_mappers, transitions):
+    def __init__(self, *, id, submit_queue, results_queue, state_mappers, transitions):
         super(Worker, self).__init__()
+        self.id = id
         self.submit_queue = submit_queue
         self.results_queue = results_queue
         self.state_mappers = state_mappers

@@ -42,30 +42,32 @@ class World:
         self.dict_states.append(object.init)
     
     def run_works(self, *, works, submit_queue, results_queue):
+        if len(works) == 0: return self.dict_states
+        
         assert submit_queue.empty() and results_queue.empty()
         #[submit_queue.put(orjson.dumps(work, option=orjson.OPT_SERIALIZE_NUMPY).decode("utf-8")) for work in works]
         
         [submit_queue.put(work) for work in works]
         results = [results_queue.get() for i in range(0, len(works))]
-        results = sorted(results, key=lambda e: e["id"])
-        results = tuple(map(lambda e: e["result"], results))
+        for result in results:
+            self.dict_states[result["id"]] = result["result"]
         
         assert submit_queue.empty() and results_queue.empty()
-        return results
 
     def transitions_tick(self, *, submit_queue, results_queue):
         works = []        
         for id, (state, transitions_ids) in enumerate(zip(self.dict_states, self.transitions_ids)):
-            works.append(dict(
-                type = Works.STATE_TRANSITION.value,
-                args = dict(
-                    id = id,
-                    state = state,
-                    transitions_ids = transitions_ids
-                )
-            ))
+            if len(transitions_ids) > 0:
+                works.append(dict(
+                    type = Works.STATE_TRANSITION.value,
+                    args = dict(
+                        id = id,
+                        state = state,
+                        transitions_ids = transitions_ids
+                    )
+                ))
         
-        self.dict_states = self.run_works(
+        self.run_works(
             works=works,
             submit_queue=submit_queue,
             results_queue=results_queue
@@ -75,17 +77,18 @@ class World:
         works = []
         #global_state = orjson.dumps(self.global_state, option=orjson.OPT_SERIALIZE_NUMPY).decode("utf-8")
         for id, (state, state_mappers_ids) in enumerate(zip(self.dict_states, self.state_mappers_ids)):
-            works.append(dict(
-                type = Works.STATE_MAP.value,
-                args = dict(
-                    id = id,
-                    state = state,
-                    global_state = self.global_state,
-                    state_mappers_ids = state_mappers_ids
-                )
-            ))
-
-        self.dict_states = self.run_works(
+            if len(state_mappers_ids) > 0:
+                works.append(dict(
+                    type = Works.STATE_MAP.value,
+                    args = dict(
+                        id = id,
+                        state = state,
+                        global_state = self.global_state,
+                        state_mappers_ids = state_mappers_ids
+                    )
+                ))
+        
+        self.run_works(
             works=works,
             submit_queue=submit_queue,
             results_queue=results_queue
@@ -127,11 +130,12 @@ class World:
         
         workers = [
             Worker(
+                id=id,
                 submit_queue=submit_queue,
                 results_queue=results_queue,
                 state_mappers=self.state_mappers,
                 transitions=self.transitions
-            ) for _ in range(0, workers)
+            ) for id in range(0, workers)
         ]
         [worker.start() for worker in workers]
 
