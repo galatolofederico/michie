@@ -1,3 +1,5 @@
+import numpy as np
+import math
 from michie.mappers.statemapper import StateMapper
 
 class RangeAndBearingStateMapper(StateMapper):
@@ -6,43 +8,40 @@ class RangeAndBearingStateMapper(StateMapper):
         return "neighbours" in state and "position" in state
     
     @classmethod
-    def map_global_state(cls, global_state):
+    def global_state_map(cls, global_state):
         return dict()
 
     @classmethod
-    def map_state(cls, state):
+    def state_map(cls, state):
         return dict(
             position=state["position"],
             neighbours=state["neighbours"]
         )
     
     @classmethod
-    def map(cls, mapped_state):
-        range_and_bearing = []
-        valid_neighbours = filter(lambda n: n["state"] != "fault", mapped_state["neighbours"]) 
-        
-        for neighbour in valid_neighbours:
-            self_x, self_y = mapped_state["position"]["position"]
-            neig_x, neig_y = neighbour["position"]["position"]
-            heading = mapped_state["position"]["heading"]
+    def beacon(cls, neighbour):
+        raise NotImplementedError()
 
-            target_x, target_y = (neig_x-self_x), (neig_y-self_y)
-            rotated_target_x = target_x*np.cos(-heading) - target_y*np.sin(-heading)
-            rotated_target_y = target_x*np.sin(-heading) + target_y*np.cos(-heading)
+    @classmethod
+    def map(cls, id, mapped_state, mapped_global_state):
+        range_and_bearing = []
+        
+        for neighbour in mapped_state["neighbours"]:
+            self_x, self_y = mapped_state["position"]["position"]
+            self_heading = mapped_state["position"]["heading"]
+            neig_x, neig_y = neighbour["position"]["position"]
+                        
+            point = (neig_x - self_x, neig_y - self_y)
             
-            distance = math.sqrt(target_x**2 + target_y**2)
-            rotated_heading = np.arctan2(rotated_target_y, rotated_target_x)
+            angle = np.arctan2(point[1], point[0]) - self_heading
+            distance = math.sqrt(point[0]**2 + point[1]**2)
+            virtual_point = (distance*np.cos(angle), distance*np.sin(angle))
 
             range_and_bearing.append(dict(
                 distance=distance,
-                angle=rotated_heading,
-                point=(rotated_target_x, rotated_target_y),
-                beacon=dict(
-                    type=neighbour["type"],
-                    state=neighbour["state"],
-                    level=neighbour["level"],
-                    perceive_radius=neighbour["perceive_radius"]
-                )
+                angle=angle,
+                point=virtual_point,
+                beacon=cls.beacon(neighbour)
             ))
         
         return dict(

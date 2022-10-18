@@ -15,13 +15,18 @@ class RandomSpeedChange(michie.Transition):
 
     @classmethod
     def transact(cls, state):
-        state["speed"]["angular"] += random.uniform(-0.01, 0.01)
-        state["speed"]["angular"] = np.clip(state["speed"]["angular"], -0.2, 0.2)
-
-        state["speed"]["linear"] += random.uniform(-0.1, 0.1)
-        state["speed"]["linear"] = np.clip(state["speed"]["linear"], 0, 5)
+        new_linear_speed = state["speed"]["linear"] + random.uniform(-0.1, 0.1)
+        new_linear_speed = np.clip(new_linear_speed, 0, 5)
         
-        return state
+        new_angular_speed = state["speed"]["angular"] + random.uniform(-0.01, 0.01)
+        new_angular_speed = np.clip(new_angular_speed, -0.2, 0.2)
+
+        return dict(
+            speed=dict(
+                linear=new_linear_speed,
+                angular=new_angular_speed
+            )
+        )
 
 def add_drone(world, color):
     init = dict(

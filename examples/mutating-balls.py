@@ -18,8 +18,12 @@ class MutateTransition(michie.Transition):
     def transact(cls, mapped_state):
         max_count = Counter(mapped_state["neighbours_colors"]).most_common(1)
         if len(max_count) > 0:
-            mapped_state["color"] = max_count[0][0]
-        return mapped_state
+            color = max_count[0][0]
+            return dict(
+                color=color
+            )
+        
+        return dict()
 
 class FilterNeighboursMapper(michie.StateMapper):
     @classmethod

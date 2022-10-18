@@ -4,3 +4,4 @@ from michie.mappers.distances import DistancesGlobalMapper
 from michie.mappers.neighbours import NeighboursGlobalMapper
 from michie.mappers.communication_neighbours import CommunicationNeighboursGlobalMapper
 from michie.mappers.condition_neighbours import ConditionNeighboursGlobalMapper
+from michie.mappers.range_and_bearing import RangeAndBearingStateMapper

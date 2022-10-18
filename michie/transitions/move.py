@@ -27,10 +27,12 @@ class MoveTransition(Transition):
             x_k1 = x_k + (v_k/w_k)*(np.sin(theta_k1) - np.sin(theta_k))
             y_k1 = y_k - (v_k/w_k)*(np.cos(theta_k1) - np.cos(theta_k)) 
 
-        mapped_state["position"]["position"] = (x_k1, y_k1)
-        mapped_state["position"]["heading"] = theta_k1
-        
-        return mapped_state
+        return dict(
+            position=dict(
+                position=(x_k1, y_k1),
+                heading=theta_k1
+            )
+        )
 
 
 @factory
