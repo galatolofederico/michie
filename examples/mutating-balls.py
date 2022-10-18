@@ -9,7 +9,7 @@ from michie.utils.init import random_position, random_speed
 
 class MutateTransition(michie.Transition):
     @classmethod
-    def map(cls, state):
+    def state_map(cls, state):
         return dict(
             neighbours_colors=list(map(lambda n: n["color"], state["neighbours"]))
         )
@@ -23,9 +23,19 @@ class MutateTransition(michie.Transition):
 
 class FilterNeighboursMapper(michie.StateMapper):
     @classmethod
-    def map(cls, id, state, global_state):
-        state["neighbours"] = list(filter(lambda n: n["type"] == "FixedBall", state["neighbours"]))
-        return state
+    def global_state_map(cls, global_state):
+        return dict()
+    
+    @classmethod
+    def state_map(cls, state):
+        return dict(
+            neighbours=state["neighbours"]
+        )
+    
+    @classmethod
+    def map(cls, id, mapped_state, global_state):
+        neighbours = list(filter(lambda n: n["type"] == "FixedBall", mapped_state["neighbours"]))
+        return dict(neighbours=neighbours)
 
 class NeighboursRadiusSprite(michie.Sprite):
     def __init__(self, radius):

@@ -8,7 +8,7 @@ from michie.utils.init import random_position, random_speed
 
 class RandomSpeedChange(michie.Transition):
     @classmethod
-    def map(cls, state):
+    def state_map(cls, state):
         return dict(
             speed=state["speed"]
         )

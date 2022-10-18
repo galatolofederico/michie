@@ -5,7 +5,7 @@ from michie.factory import factory
 
 class MoveTransition(Transition):
     @classmethod
-    def map(cls, state):
+    def state_map(cls, state):
         return dict(
             position=state["position"],
             speed=state["speed"]
@@ -36,8 +36,8 @@ class MoveTransition(Transition):
 @factory
 class WrappedMoveTransitionFactory(Transition):
     @classmethod
-    def map(cls, state):
-        return MoveTransition.map(state)
+    def state_map(cls, state):
+        return MoveTransition.state_map(state)
     
     @classmethod
     def transact(cls, mapped_state):

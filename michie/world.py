@@ -55,44 +55,53 @@ class World:
         assert submit_queue.empty() and results_queue.empty()
 
     def transitions_tick(self, *, submit_queue, results_queue):
-        works = []        
+        assert submit_queue.empty() and results_queue.empty()
+
+        works = 0
         for id, (state, transitions_ids) in enumerate(zip(self.dict_states, self.transitions_ids)):
-            if len(transitions_ids) > 0:
-                works.append(dict(
-                    type = Works.STATE_TRANSITION.value,
-                    args = dict(
-                        id = id,
-                        state = state,
-                        transitions_ids = transitions_ids
-                    )
-                ))
-        
-        self.run_works(
-            works=works,
-            submit_queue=submit_queue,
-            results_queue=results_queue
-        )
+            for transition_id in transitions_ids:
+                transition = self.transitions[transition_id]
+                if transition.requirements(state):
+                    submit_queue.put(dict(
+                        type = Works.STATE_TRANSITION.value,
+                        args = dict(
+                            id = id,
+                            state = transition.state_map(state),
+                            transition_id = transition_id
+                        )
+                    ))
+                    works += 1
+
+        for _ in range(0, works):
+            result = results_queue.get()
+            self.dict_states[result["id"]].update(result["result"])  
+
+        assert submit_queue.empty() and results_queue.empty()
     
     def map_states(self, *, submit_queue, results_queue):
-        works = []
-        #global_state = orjson.dumps(self.global_state, option=orjson.OPT_SERIALIZE_NUMPY).decode("utf-8")
+        assert submit_queue.empty() and results_queue.empty()
+
+        works = 0
         for id, (state, state_mappers_ids) in enumerate(zip(self.dict_states, self.state_mappers_ids)):
-            if len(state_mappers_ids) > 0:
-                works.append(dict(
-                    type = Works.STATE_MAP.value,
-                    args = dict(
-                        id = id,
-                        state = state,
-                        global_state = self.global_state,
-                        state_mappers_ids = state_mappers_ids
-                    )
-                ))
+            for state_mapper_id in state_mappers_ids:
+                mapper = self.state_mappers[state_mapper_id]
+                if mapper.requirements(state):
+                    submit_queue.put(dict(
+                        type = Works.STATE_MAP.value,
+                        args = dict(
+                            id = id,
+                            state = mapper.state_map(state),
+                            global_state = mapper.global_state_map(self.global_state),
+                            state_mapper_id = state_mapper_id
+                        )
+                    ))
+                    works += 1
         
-        self.run_works(
-            works=works,
-            submit_queue=submit_queue,
-            results_queue=results_queue
-        )
+        for _ in range(0, works):
+            result = results_queue.get()
+            self.dict_states[result["id"]].update(result["result"])  
+
+        assert submit_queue.empty() and results_queue.empty()
 
     def global_map_states(self):
         for global_mapper in self.global_mappers:

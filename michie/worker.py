@@ -16,17 +16,6 @@ class Worker(multiprocessing.Process):
         self.results_queue = results_queue
         self.state_mappers = state_mappers
         self.transitions = transitions
-    
-    def state_transition(self, *, state, transitions_ids):
-        transitions = map(lambda t: self.transitions[t], transitions_ids)
-        partial_updates = []
-
-        for transition in transitions:
-            mapped_state = transition.map(state)
-            partial_update = transition.transact(mapped_state)
-            state.update(partial_update)
-        
-        return state
 
     def state_map(self, *, id, state, global_state, state_mappers_ids):
         state_mappers = map(lambda t: self.state_mappers[t], state_mappers_ids)
@@ -47,19 +36,15 @@ class Worker(multiprocessing.Process):
             if work["type"] == Works.EXIT.value:
                 return
             if work["type"] == Works.STATE_MAP.value:
-                result = self.state_map(
-                    id = work["args"]["id"],
-                    state = work["args"]["state"],
-                    #global_state = orjson.loads(work["args"]["global_state"]),
-                    global_state = work["args"]["global_state"],
-                    state_mappers_ids = work["args"]["state_mappers_ids"]
-                )
+                result = self.state_mappers[
+                    work["args"]["state_mapper_id"]
+                ].map(work["args"]["id"], work["args"]["state"], work["args"]["global_state"])
+
             if work["type"] == Works.STATE_TRANSITION.value:
-                result = self.state_transition(
-                    state = work["args"]["state"],
-                    transitions_ids = work["args"]["transitions_ids"]
-                )
-            
+                result = self.transitions[
+                    work["args"]["transition_id"]
+                ].transact(work["args"]["state"])
+
             self.results_queue.put(dict(
                 id=work["args"]["id"],
                 result=result

@@ -2,7 +2,11 @@
 
 class Transition:
     @classmethod
-    def map(cls, state):
+    def requirements(cls, state):
+        return True
+
+    @classmethod
+    def state_map(cls, state):
         raise NotImplementedError
     
     @classmethod
