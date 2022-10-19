@@ -1,7 +1,7 @@
 import dataclasses
 from tqdm import trange
 import multiprocessing
-import orjson
+import time
 
 from michie.object import Object
 from michie.worker import Worker, Works
@@ -11,7 +11,10 @@ class World:
         self.config = config
         self.global_mappers = global_mappers
         self.tick_hooks = tick_hooks
-        self.global_state = dict(tick=0)
+        self.global_state = dict(
+            tick=0,
+            michie=dict(stats=self.init_stats())
+        )
         self.objects = []
         self.dict_states = []
         self.state_mappers = dict()
@@ -21,6 +24,18 @@ class World:
         self.window = None
         self.render_surface = None
     
+    def init_stats(self):
+        return dict(
+            global_mappers_execution_time=0,
+            transitions_submission_time=0,
+            transitions_retrieval_time=0,
+            transitions_works=0,
+            state_mappers_submission_time=0,
+            state_mappers_retrieval_time=0,
+            state_mappers_works=0,
+            render_time=0
+        )
+
     def add_object(self, object):
         assert isinstance(object, Object), "You can only add michie.Object instances"
         object.init["type"] = object.name
@@ -41,22 +56,11 @@ class World:
 
         self.objects.append(object)
         self.dict_states.append(object.init)
-    
-    def run_works(self, *, works, submit_queue, results_queue):
-        if len(works) == 0: return self.dict_states
-        
-        assert submit_queue.empty() and results_queue.empty()
-        
-        [submit_queue.put(work) for work in works]
-        results = [results_queue.get() for i in range(0, len(works))]
-        for result in results:
-            self.dict_states[result["id"]] = result["result"]
-        
-        assert submit_queue.empty() and results_queue.empty()
 
     def transitions_tick(self, *, submit_queue, results_queue):
         assert submit_queue.empty() and results_queue.empty()
 
+        start_submission_time = time.time()
         works = 0
         for id, (state, transitions_ids) in enumerate(zip(self.dict_states, self.transitions_ids)):
             for transition_id in transitions_ids:
@@ -71,16 +75,23 @@ class World:
                         )
                     ))
                     works += 1
-
+        
+        end_submission_time = time.time()
         for _ in range(0, works):
             result = results_queue.get()
             self.dict_states[result["id"]].update(result["result"])  
+        end_retrieve_time = time.time()
+
+        self.global_state["michie"]["stats"]["transitions_submission_time"] = end_submission_time - start_submission_time
+        self.global_state["michie"]["stats"]["transitions_retrieval_time"] = end_retrieve_time - end_submission_time
+        self.global_state["michie"]["stats"]["transitions_works"] = works
 
         assert submit_queue.empty() and results_queue.empty()
     
     def map_states(self, *, submit_queue, results_queue):
         assert submit_queue.empty() and results_queue.empty()
 
+        start_submission_time = time.time()
         works = 0
         for id, (state, state_mappers_ids) in enumerate(zip(self.dict_states, self.state_mappers_ids)):
             for state_mapper_id in state_mappers_ids:
@@ -97,17 +108,27 @@ class World:
                     ))
                     works += 1
         
+        end_submission_time = time.time()
         for _ in range(0, works):
             result = results_queue.get()
             self.dict_states[result["id"]].update(result["result"])  
+        end_retrieve_time = time.time()
+
+        self.global_state["michie"]["stats"]["state_mappers_submission_time"] = end_submission_time - start_submission_time
+        self.global_state["michie"]["stats"]["state_mappers_retrieval_time"] = end_retrieve_time - end_submission_time
+        self.global_state["michie"]["stats"]["state_mappers_works"] = works
 
         assert submit_queue.empty() and results_queue.empty()
 
     def global_map_states(self):
+        start_time = time.time()
         for global_mapper in self.global_mappers:
             self.dict_states = global_mapper.map(self.dict_states, self.global_state) 
+        end_time = time.time()
+        self.global_state["michie"]["stats"]["global_mappers_execution_time"] = end_time - start_time
 
     def render(self, *, window, clock, fps=30, background="black"):
+        start_time = time.time()
         import pygame
         window.fill(background)
         sprites = [object.sprites for object in self.objects]
@@ -115,6 +136,8 @@ class World:
             for object_sprite in object_sprites: object_sprite.draw(window=window, state=state)
         pygame.display.flip()
         if clock is not None: clock.tick(fps)
+        end_time = time.time()
+        self.global_state["michie"]["stats"]["render_time"] = end_time - start_time
 
     def run(
             self,
@@ -148,7 +171,7 @@ class World:
         ]
         [worker.start() for worker in workers]
         for hook in self.tick_hooks: hook.start(self.dict_states, self.global_state, window)
-        
+        print(len(workers))
         for i in trange(0, max_ticks):
             self.global_map_states()
             self.map_states(submit_queue=submit_queue, results_queue=results_queue)
