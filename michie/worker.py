@@ -30,8 +30,6 @@ class Worker(multiprocessing.Process):
     def run(self):
         while True:
             work = self.submit_queue.get()
-            #work = orjson.loads(work)
-            #print(work)
             result = None
             if work["type"] == Works.EXIT.value:
                 return

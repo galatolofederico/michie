@@ -7,9 +7,10 @@ from michie.object import Object
 from michie.worker import Worker, Works
 
 class World:
-    def __init__(self, *, global_mappers=[], state_mappers=[], config=None):
+    def __init__(self, *, global_mappers=[], tick_hooks=[], config=None):
         self.config = config
         self.global_mappers = global_mappers
+        self.tick_hooks = tick_hooks
         self.global_state = dict(tick=0)
         self.objects = []
         self.dict_states = []
@@ -45,7 +46,6 @@ class World:
         if len(works) == 0: return self.dict_states
         
         assert submit_queue.empty() and results_queue.empty()
-        #[submit_queue.put(orjson.dumps(work, option=orjson.OPT_SERIALIZE_NUMPY).decode("utf-8")) for work in works]
         
         [submit_queue.put(work) for work in works]
         results = [results_queue.get() for i in range(0, len(works))]
@@ -147,7 +147,8 @@ class World:
             ) for id in range(0, workers)
         ]
         [worker.start() for worker in workers]
-
+        for hook in self.tick_hooks: hook.start(self.dict_states, self.global_state, window)
+        
         for i in trange(0, max_ticks):
             self.global_map_states()
             self.map_states(submit_queue=submit_queue, results_queue=results_queue)
@@ -160,7 +161,10 @@ class World:
                 fps=render_fps,
                 background=render_background
             )
+            for hook in self.tick_hooks: hook.tick(self.dict_states, self.global_state, window)
         
+        for hook in self.tick_hooks: hook.end(self.dict_states, self.global_state, window)
+
         for i in range(0, len(workers)):
             submit_queue.put(dict(
                 type=Works.EXIT.value
