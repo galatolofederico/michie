@@ -9,7 +9,8 @@ class CommunicationNeighboursGlobalMapper(GlobalMapper):
         self.communication_key = communication_key
     
     def map(self, states, global_state):
-        for id, (state, dists) in enumerate(zip(states, global_state["distances"])):
+        for id, state in enumerate(states):
+            dists = state["distances"]
             other_dists = np.concatenate((dists[:id], dists[id+1:]))
             other_states = states[:id] + states[id+1:]
 

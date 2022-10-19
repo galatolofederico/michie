@@ -33,7 +33,7 @@ class RangeAndBearingStateMapper(StateMapper):
                         
             point = (neig_x - self_x, neig_y - self_y)
             
-            angle = np.arctan2(point[1], point[0]) - self_heading
+            angle = np.arctan2(point[1], point[0])%(2*math.pi) - self_heading
             distance = math.sqrt(point[0]**2 + point[1]**2)
             virtual_point = (distance*np.cos(angle), distance*np.sin(angle))
 
