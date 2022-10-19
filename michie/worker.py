@@ -1,6 +1,7 @@
 import multiprocessing
-import orjson
 from enum import Enum
+
+from michie.serialize import serialize, deserialize
 
 class Works(Enum):
     EXIT = 0
@@ -30,6 +31,8 @@ class Worker(multiprocessing.Process):
     def run(self):
         while True:
             work = self.submit_queue.get()
+            work = deserialize(work)
+            
             result = None
             if work["type"] == Works.EXIT.value:
                 return
@@ -43,7 +46,16 @@ class Worker(multiprocessing.Process):
                     work["args"]["transition_id"]
                 ].transact(work["args"]["state"])
 
-            self.results_queue.put(dict(
+            result = dict(
                 id=work["args"]["id"],
                 result=result
-            ))
+            )
+            try:
+                result = serialize(result)
+            except Exception as e:
+                print("Serialization error for result")
+                print(result)
+                print("from work")
+                print(work)
+                raise e
+            self.results_queue.put(result)

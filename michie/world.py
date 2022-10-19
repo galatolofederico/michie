@@ -2,9 +2,11 @@ import dataclasses
 from tqdm import trange
 import multiprocessing
 import time
+import orjson
 
 from michie.object import Object
 from michie.worker import Worker, Works
+from michie.serialize import serialize, deserialize
 
 class World:
     def __init__(self, *, global_mappers=[], tick_hooks=[], config=None):
@@ -66,19 +68,27 @@ class World:
             for transition_id in transitions_ids:
                 transition = self.transitions[transition_id]
                 if transition.requirements(state):
-                    submit_queue.put(dict(
+                    work = dict(
                         type = Works.STATE_TRANSITION.value,
                         args = dict(
                             id = id,
                             state = transition.state_map(state),
                             transition_id = transition_id
                         )
-                    ))
+                    )
+                    try:
+                        submit_queue.put(serialize(work))
+                    except Exception as e:
+                        print("Serialization error for work")
+                        print(work)
+                        raise e
+                    
                     works += 1
         
         end_submission_time = time.time()
         for _ in range(0, works):
             result = results_queue.get()
+            result = deserialize(result)
             self.dict_states[result["id"]].update(result["result"])  
         end_retrieve_time = time.time()
 
@@ -97,7 +107,7 @@ class World:
             for state_mapper_id in state_mappers_ids:
                 mapper = self.state_mappers[state_mapper_id]
                 if mapper.requirements(state):
-                    submit_queue.put(dict(
+                    work = dict(
                         type = Works.STATE_MAP.value,
                         args = dict(
                             id = id,
@@ -105,12 +115,20 @@ class World:
                             global_state = mapper.global_state_map(self.global_state),
                             state_mapper_id = state_mapper_id
                         )
-                    ))
+                    )
+                    try:
+                        submit_queue.put(serialize(work))
+                    except Exception as e:
+                        print("Serialization error for work")
+                        print(work)
+                        raise e
+
                     works += 1
         
         end_submission_time = time.time()
         for _ in range(0, works):
             result = results_queue.get()
+            result = deserialize(result)
             self.dict_states[result["id"]].update(result["result"])  
         end_retrieve_time = time.time()
 
@@ -171,7 +189,7 @@ class World:
         ]
         [worker.start() for worker in workers]
         for hook in self.tick_hooks: hook.start(self.dict_states, self.global_state, window)
-        print(len(workers))
+        
         for i in trange(0, max_ticks):
             self.global_map_states()
             self.map_states(submit_queue=submit_queue, results_queue=results_queue)
@@ -189,6 +207,6 @@ class World:
         for hook in self.tick_hooks: hook.end(self.dict_states, self.global_state, window)
 
         for i in range(0, len(workers)):
-            submit_queue.put(dict(
+            submit_queue.put(serialize(dict(
                 type=Works.EXIT.value
-            ))
+            )))

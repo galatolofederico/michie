@@ -30,8 +30,8 @@ class MoveTransition(Transition):
 
         return dict(
             position=dict(
-                position=(x_k1, y_k1),
-                heading=theta_k1
+                position=(float(x_k1), float(y_k1)),
+                heading=float(theta_k1)
             )
         )
 
@@ -69,11 +69,11 @@ class EulerMoveTransition(Transition):
 
         x_k1 = x_k + v_k*np.cos(theta_k)
         y_k1 = y_k + v_k*np.sin(theta_k)
-        theta_k1 = theta_k + w_k
+        theta_k1 = (theta_k + w_k)%(2*math.pi)
 
         return dict(
             position=dict(
-                position=(x_k1, y_k1),
-                heading=theta_k1
+                position=(float(x_k1), float(y_k1)),
+                heading=float(theta_k1)
             )
         )
