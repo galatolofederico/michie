@@ -13,7 +13,7 @@ class MoveTransition(Transition):
         )
     
     @classmethod
-    def transact(cls, mapped_state):
+    def transition(cls, mapped_state):
         x_k, y_k = mapped_state["position"]["position"]
         theta_k = mapped_state["position"]["heading"]
         v_k = mapped_state["speed"]["linear"]
@@ -43,8 +43,8 @@ class WrappedMoveTransitionFactory(Transition):
         return MoveTransition.state_map(state)
     
     @classmethod
-    def transact(cls, mapped_state):
-        mapped_state = MoveTransition.transact(mapped_state)
+    def transition(cls, mapped_state):
+        mapped_state = MoveTransition.transition(mapped_state)
         mapped_state["position"]["position"] = (
             mapped_state["position"]["position"][0] % cls.args["bounds"][0],
             mapped_state["position"]["position"][1] % cls.args["bounds"][1],
@@ -61,7 +61,7 @@ class EulerMoveTransition(Transition):
         )
     
     @classmethod
-    def transact(cls, mapped_state):
+    def transition(cls, mapped_state):
         x_k, y_k = mapped_state["position"]["position"]
         theta_k = mapped_state["position"]["heading"]
         v_k = mapped_state["speed"]["linear"]

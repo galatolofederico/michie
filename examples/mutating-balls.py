@@ -15,7 +15,7 @@ class MutateTransition(michie.Transition):
         )
     
     @classmethod
-    def transact(cls, mapped_state):
+    def transition(cls, mapped_state):
         max_count = Counter(mapped_state["neighbours_colors"]).most_common(1)
         if len(max_count) > 0:
             color = max_count[0][0]
@@ -109,7 +109,7 @@ for _ in range(0, 30): add_fixed_ball(world, "blue")
 world.run(
     max_ticks=1000,
     workers=os.cpu_count(),
-    #render=True,
+    render=True,
     render_fps=30,
     render_surface=(800, 600)
 )

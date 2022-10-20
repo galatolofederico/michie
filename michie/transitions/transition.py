@@ -10,5 +10,5 @@ class Transition:
         raise NotImplementedError
     
     @classmethod
-    def transact(cls, mapped_state):
+    def transition(cls, mapped_state):
         raise NotImplementedError

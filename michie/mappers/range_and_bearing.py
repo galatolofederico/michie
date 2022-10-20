@@ -38,9 +38,9 @@ class RangeAndBearingStateMapper(StateMapper):
             virtual_point = (distance*np.cos(angle), distance*np.sin(angle))
 
             range_and_bearing.append(dict(
-                distance=distance,
-                angle=angle,
-                point=virtual_point,
+                distance=float(distance),
+                angle=float(angle),
+                point=[float(virtual_point[0]), float(virtual_point[1])],
                 beacon=cls.beacon(neighbour)
             ))
         

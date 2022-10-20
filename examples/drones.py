@@ -14,7 +14,7 @@ class RandomSpeedChange(michie.Transition):
         )
 
     @classmethod
-    def transact(cls, state):
+    def transition(cls, state):
         new_linear_speed = state["speed"]["linear"] + random.uniform(-0.1, 0.1)
         new_linear_speed = np.clip(new_linear_speed, 0, 5)
         
@@ -23,8 +23,8 @@ class RandomSpeedChange(michie.Transition):
 
         return dict(
             speed=dict(
-                linear=new_linear_speed,
-                angular=new_angular_speed
+                linear=float(new_linear_speed),
+                angular=float(new_angular_speed)
             )
         )
 

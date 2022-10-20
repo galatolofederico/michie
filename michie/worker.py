@@ -44,7 +44,7 @@ class Worker(multiprocessing.Process):
             if work["type"] == Works.STATE_TRANSITION.value:
                 result = self.transitions[
                     work["args"]["transition_id"]
-                ].transact(work["args"]["state"])
+                ].transition(work["args"]["state"])
 
             result = dict(
                 id=work["args"]["id"],
