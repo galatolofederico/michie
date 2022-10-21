@@ -7,7 +7,13 @@ from michie.mappers.globalmapper import GlobalMapper
 class NeighboursGlobalMapper(GlobalMapper):
     def __init__(self, radius):
         self.radius = radius
-    
+
+    @staticmethod
+    def beacon(state):
+        beacon = state.copy()
+        if "neighbours" in beacon: del beacon["neighbours"]
+        return beacon
+
     def map(self, states, global_state):
         for id, state in enumerate(states):
             dists = state["distances"]
@@ -17,8 +23,8 @@ class NeighboursGlobalMapper(GlobalMapper):
             state["neighbours"] = []
             for id, other_state in enumerate(other_states):
                 if other_dists[id] <= self.radius:
-                    nstate = other_state.copy()
-                    nstate["neighbours"] = None
-                    state["neighbours"].append(nstate)
+                    beacon = type(self).beacon(other_state)
+                    assert "neighbours" not in beacon, "The neighbour beacon must not have the neighbours field"
+                    state["neighbours"].append(beacon)
 
         return states

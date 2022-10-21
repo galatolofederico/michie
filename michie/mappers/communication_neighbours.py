@@ -8,6 +8,12 @@ class CommunicationNeighboursGlobalMapper(GlobalMapper):
     def __init__(self, communication_key):
         self.communication_key = communication_key
     
+    @staticmethod
+    def beacon(state):
+        beacon = state.copy()
+        if "neighbours" in beacon: del beacon["neighbours"]
+        return beacon
+
     def map(self, states, global_state):
         for id, state in enumerate(states):
             dists = state["distances"]
@@ -17,8 +23,8 @@ class CommunicationNeighboursGlobalMapper(GlobalMapper):
             state["neighbours"] = []
             for nid, other_state in enumerate(other_states):
                 if dists[nid] < min(states[id][self.communication_key], states[nid][self.communication_key]):
-                    nstate = other_state.copy()
-                    nstate["neighbours"] = None
-                    state["neighbours"].append(nstate)
+                    beacon = type(self).beacon(other_state)
+                    assert "neighbours" not in beacon, "The neighbour beacon must not have the neighbours field"
+                    state["neighbours"].append(beacon)
 
         return states

@@ -15,11 +15,12 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     install_requires=[
-        "tqdm==4.64.1",
-        "pygame==2.1.2",
-        "numpy==1.23.4",
-        "schema==0.7.5",
-        "scipy==1.9.2"
+        "tqdm>=4.64.1",
+        "pygame>=2.1.2",
+        "numpy>=1.23.4",
+        "schema>=0.7.5",
+        "scipy>=1.9.2",
+        "orjson>=3.8.0"
     ],
     classifiers=[
         "Programming Language :: Python :: 3.8",

@@ -9,9 +9,13 @@ from michie.utils.init import random_position, random_speed
 
 class MutateTransition(michie.Transition):
     @classmethod
+    def requirements(cls, state):
+        return "filtered_neighbours" in state
+    
+    @classmethod
     def state_map(cls, state):
         return dict(
-            neighbours_colors=list(map(lambda n: n["color"], state["neighbours"]))
+            neighbours_colors=list(map(lambda n: n["color"], state["filtered_neighbours"]))
         )
     
     @classmethod
@@ -27,6 +31,10 @@ class MutateTransition(michie.Transition):
 
 class FilterNeighboursMapper(michie.StateMapper):
     @classmethod
+    def requirements(cls, state):
+        return "neighbours" in state
+    
+    @classmethod
     def global_state_map(cls, global_state):
         return dict()
     
@@ -38,8 +46,8 @@ class FilterNeighboursMapper(michie.StateMapper):
     
     @classmethod
     def map(cls, id, mapped_state, global_state):
-        neighbours = list(filter(lambda n: n["type"] == "FixedBall", mapped_state["neighbours"]))
-        return dict(neighbours=neighbours)
+        filtered_neighbours = list(filter(lambda n: n["type"] == "FixedBall", mapped_state["neighbours"]))
+        return dict(filtered_neighbours=filtered_neighbours)
 
 class NeighboursRadiusSprite(michie.Sprite):
     def __init__(self, radius):
@@ -47,7 +55,6 @@ class NeighboursRadiusSprite(michie.Sprite):
     
     def draw(self, *, window, state):
         pygame.draw.circle(window, "white", state["position"]["position"], self.radius, 1)
-
 
 
 def add_fixed_ball(world, color):
