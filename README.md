@@ -1,5 +1,3 @@
-Large Scale Multi Agent Simulator with Memoized Idempotent Disjoint Transitions
+# michie
 
-===> michie
-
-https://en.wikipedia.org/wiki/Donald_Michie
+Distributed high-throughput pythonic framework for multi-agent simulations

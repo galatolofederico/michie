@@ -49,12 +49,7 @@ def add_drone(world, color):
 
     world.add_object(Drone)
 
-world = michie.World(
-    config=dict(
-        height=800,
-        width=600
-    )
-)
+world = michie.World()
 
 for _ in range(0, 30): add_drone(world, "red")
 for _ in range(0, 30): add_drone(world, "green")
