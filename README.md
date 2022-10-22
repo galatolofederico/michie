@@ -35,6 +35,10 @@ There are **three** distinct types of operations in `michie`:
 
 ## Distributed Model
 
+`michie` executes `Transitions` and `StateMappers` on remote *Workers*.
+It uses the fastest JSON python serializer [orjson](https://github.com/ijl/orjson) to serialize jobs and results.
+Before sending the job to the workers it runs the `requirements` function to check if all the needed fields are available in the current state and uses the `state_map` and `global_state_map` (only for `StateMappers`) to map the whole state in a smaller `mapped_state` to be serialized (reducing the communication overhead to the minimum)
+
 ![](./README.md.d/michie-execution.png)
 
 ## Examples
