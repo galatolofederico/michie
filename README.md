@@ -2,6 +2,9 @@
 
 Distributed high-throughput pythonic framework for multi-agent simulations
 
+![](./README.md.d/michie-architecture.png) 
+
+
 ## Installation
 
 `michie` is available on PyPI. To install it
@@ -29,6 +32,10 @@ There are **three** distinct types of operations in `michie`:
     - **Cannot read** the **global state**
     - Are executed **asynchronously** from the *Worker processes*
 
+
+## Distributed Model
+
+![](./README.md.d/michie-execution.png)
 
 ## Examples
 
