@@ -1,4 +1,8 @@
 /env
 __pycache__/
 
+/build
+/dist
+/michie.egg-info
+
 /.vscode
