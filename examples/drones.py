@@ -43,7 +43,7 @@ def add_drone(world, color):
             RandomSpeedChange
         ],
         sprites=[
-            michie.sprites.DroneSprite(width=20, height=30)
+            michie.sprites.DroneSprite(width=15, height=20)
         ]
     )
 
@@ -51,9 +51,9 @@ def add_drone(world, color):
 
 world = michie.World()
 
-for _ in range(0, 30): add_drone(world, "red")
-for _ in range(0, 30): add_drone(world, "green")
-for _ in range(0, 30): add_drone(world, "blue")
+for _ in range(0, 50): add_drone(world, "red")
+for _ in range(0, 50): add_drone(world, "green")
+for _ in range(0, 50): add_drone(world, "blue")
 
 world.run(
     max_ticks=1000,
