@@ -3,10 +3,13 @@ from tqdm import trange
 import multiprocessing
 import time
 import orjson
+import os
 
 from michie.object import Object
 from michie.worker import Worker, Works
 from michie.serialize import serialize, deserialize
+
+FORCE_SYNC = bool(os.environ.get("MICHIE_FORCE_SYNC", False))
 
 class World:
     def __init__(self, *, global_mappers=[], tick_hooks=[], config=None):
@@ -68,7 +71,7 @@ class World:
         for id, (state, transitions_ids) in enumerate(zip(self.dict_states, self.transitions_ids)):
             for transition_id in transitions_ids:
                 transition = self.transitions[transition_id]
-                if not transition.sync() and transition.requirements(state):
+                if (not FORCE_SYNC and not transition.sync()) and transition.requirements(state):
                     work = dict(
                         type = Works.STATE_TRANSITION.value,
                         args = dict(
@@ -92,7 +95,7 @@ class World:
         for id, (state, transitions_ids) in enumerate(zip(self.dict_states, self.transitions_ids)):
             for transition_id in transitions_ids:
                 transition = self.transitions[transition_id]
-                if transition.sync() and transition.requirements(state):
+                if (FORCE_SYNC or transition.sync()) and transition.requirements(state):
                     results_queue.put(dict(
                         id=id,
                         result=transition.transition(
@@ -127,7 +130,7 @@ class World:
         for id, (state, state_mappers_ids) in enumerate(zip(self.dict_states, self.state_mappers_ids)):
             for state_mapper_id in state_mappers_ids:
                 mapper = self.state_mappers[state_mapper_id]
-                if not mapper.sync() and mapper.requirements(state):
+                if (not FORCE_SYNC and not mapper.sync()) and mapper.requirements(state):
                     work = dict(
                         type = Works.STATE_MAP.value,
                         args = dict(
@@ -152,7 +155,7 @@ class World:
         for id, (state, state_mappers_ids) in enumerate(zip(self.dict_states, self.state_mappers_ids)):
             for state_mapper_id in state_mappers_ids:
                 mapper = self.state_mappers[state_mapper_id]
-                if mapper.sync() and mapper.requirements(state):
+                if (FORCE_SYNC or mapper.sync()) and mapper.requirements(state):
                     results_queue.put(dict(
                         id=id,
                         result=mapper.map(
