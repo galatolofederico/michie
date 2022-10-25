@@ -108,15 +108,15 @@ world = michie.World(
     ],
 )
 
-for _ in range(0, 10): add_mutating_ball(world)
-for _ in range(0, 30): add_fixed_ball(world, "red")
-for _ in range(0, 30): add_fixed_ball(world, "green")
-for _ in range(0, 30): add_fixed_ball(world, "blue")
+for _ in range(0, 50): add_mutating_ball(world)
+for _ in range(0, 100): add_fixed_ball(world, "red")
+for _ in range(0, 100): add_fixed_ball(world, "green")
+for _ in range(0, 100): add_fixed_ball(world, "blue")
 
 world.run(
     max_ticks=1000,
     workers=os.cpu_count(),
     render=True,
-    render_fps=30,
+    render_fps=1_00,
     render_surface=(800, 600)
 )
