@@ -7,7 +7,11 @@ from collections import Counter
 import michie
 from michie.utils.init import random_position, random_speed
 
-class MutateTransition(michie.Transition):  
+class MutateTransition(michie.Transition):
+    @classmethod
+    def sync(cls):
+        return True
+    
     @classmethod
     def requirements(cls, state):
         return "filtered_neighbours" in state
@@ -30,6 +34,10 @@ class MutateTransition(michie.Transition):
         return dict()
 
 class FilterNeighboursMapper(michie.StateMapper):
+    @classmethod
+    def sync(cls):
+        return True
+    
     @classmethod
     def requirements(cls, state):
         return "neighbours" in state

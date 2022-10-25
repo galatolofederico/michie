@@ -2,6 +2,10 @@
 
 class StateMapper:
     @classmethod
+    def sync(cls):
+        return False
+    
+    @classmethod
     def requirements(cls, state):
         return True
 
