@@ -41,6 +41,7 @@ class World:
     def add_object(self, object):
         assert isinstance(object, Object), "You can only add michie.Object instances"
         object.init["type"] = object.name
+        object.init["id"] = len(self.objects)
 
         transitions_ids = []
         for transition in object.transitions:
@@ -59,7 +60,7 @@ class World:
         self.objects.append(object)
         self.dict_states.append(object.init)
 
-    def transitions_tick(self, *, submit_queue, results_queue):
+    def run_transitions(self, *, submit_queue, results_queue):
         assert submit_queue.empty() and results_queue.empty()
 
         start_submission_time = time.time()
@@ -98,7 +99,7 @@ class World:
 
         assert submit_queue.empty() and results_queue.empty()
     
-    def map_states(self, *, submit_queue, results_queue):
+    def run_state_mappers(self, *, submit_queue, results_queue):
         assert submit_queue.empty() and results_queue.empty()
 
         start_submission_time = time.time()
@@ -138,7 +139,7 @@ class World:
 
         assert submit_queue.empty() and results_queue.empty()
 
-    def global_map_states(self):
+    def run_global_mappers(self):
         start_time = time.time()
         for global_mapper in self.global_mappers:
             self.dict_states = global_mapper.map(self.dict_states, self.global_state) 
@@ -191,9 +192,9 @@ class World:
         for hook in self.tick_hooks: hook.start(self.dict_states, self.global_state, window)
         
         for i in trange(0, max_ticks):
-            self.global_map_states()
-            self.map_states(submit_queue=submit_queue, results_queue=results_queue)
-            self.transitions_tick(submit_queue=submit_queue, results_queue=results_queue)
+            self.run_global_mappers()
+            self.run_state_mappers(submit_queue=submit_queue, results_queue=results_queue)
+            self.run_transitions(submit_queue=submit_queue, results_queue=results_queue)
             self.global_state["tick"] += 1
 
             if render: self.render(
