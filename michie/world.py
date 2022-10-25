@@ -64,11 +64,11 @@ class World:
         assert submit_queue.empty() and results_queue.empty()
 
         start_submission_time = time.time()
-        works = 0
+        async_works = 0
         for id, (state, transitions_ids) in enumerate(zip(self.dict_states, self.transitions_ids)):
             for transition_id in transitions_ids:
                 transition = self.transitions[transition_id]
-                if transition.requirements(state):
+                if not transition.sync() and transition.requirements(state):
                     work = dict(
                         type = Works.STATE_TRANSITION.value,
                         args = dict(
@@ -84,18 +84,34 @@ class World:
                         print(work)
                         raise e
                     
-                    works += 1
+                    async_works += 1
+        
+        sync_works = 0
+        for id, (state, transitions_ids) in enumerate(zip(self.dict_states, self.transitions_ids)):
+            for transition_id in transitions_ids:
+                transition = self.transitions[transition_id]
+                if transition.sync() and transition.requirements(state):
+                    results_queue.put(dict(
+                        id=id,
+                        result=transition.transition(
+                            transition.state_map(state)
+                        ),
+                    ))
+                    
+                    sync_works += 1
         
         end_submission_time = time.time()
-        for _ in range(0, works):
+        for _ in range(0, sync_works + async_works):
             result = results_queue.get()
-            result = deserialize(result)
+            if not isinstance(result, dict):
+                result = deserialize(result)
             self.dict_states[result["id"]].update(result["result"])  
         end_retrieve_time = time.time()
 
         self.global_state["michie"]["stats"]["transitions_submission_time"] = end_submission_time - start_submission_time
         self.global_state["michie"]["stats"]["transitions_retrieval_time"] = end_retrieve_time - end_submission_time
-        self.global_state["michie"]["stats"]["transitions_works"] = works
+        self.global_state["michie"]["stats"]["transitions_sync_works"] = sync_works
+        self.global_state["michie"]["stats"]["transitions_async_works"] = async_works
 
         assert submit_queue.empty() and results_queue.empty()
     

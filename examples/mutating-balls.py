@@ -9,6 +9,10 @@ from michie.utils.init import random_position, random_speed
 
 class MutateTransition(michie.Transition):
     @classmethod
+    def sync(cls):
+        return True
+    
+    @classmethod
     def requirements(cls, state):
         return "filtered_neighbours" in state
     

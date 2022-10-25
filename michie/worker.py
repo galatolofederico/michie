@@ -18,16 +18,6 @@ class Worker(multiprocessing.Process):
         self.state_mappers = state_mappers
         self.transitions = transitions
 
-    def state_map(self, *, id, state, global_state, state_mappers_ids):
-        state_mappers = map(lambda t: self.state_mappers[t], state_mappers_ids)
-        partial_updates = []
-
-        for state_mapper in state_mappers:
-            mapped_state = state_mapper.map(id, state, global_state)
-            state.update(mapped_state)
-        
-        return state
-
     def run(self):
         while True:
             work = self.submit_queue.get()
@@ -48,7 +38,7 @@ class Worker(multiprocessing.Process):
 
             result = dict(
                 id=work["args"]["id"],
-                result=result
+                result=result,
             )
             try:
                 result = serialize(result)
