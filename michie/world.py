@@ -119,6 +119,7 @@ class World:
 
         operations = self.transitions if operation == "transitions" else self.state_mappers
         operations_ids = self.transitions_ids if operation == "transitions" else self.state_mappers_ids
+        operation_name = operation
 
         async_works = 0
         sync_works = 0
@@ -137,7 +138,7 @@ class World:
                         cache_key = ("transition", operation.__name__, operation.cache_key(state))
                     elif issubclass(operation, StateMapper):
                         cache_key = ("state-mapper", operation.__name__, operation.cache_key(state, self.global_state))
-                    
+
                     if cache_key in self.cache:
                         cached_works += 1
                         results.append(dict(
@@ -191,12 +192,12 @@ class World:
                 self.cache[cache_key] = result["result"]
         end_async_join_results = time.time()
         
-        self.global_state["michie"]["stats"]["work_build_time"] = end_work_build_time - start_work_build_time
-        self.global_state["michie"]["stats"]["sync_and_cache_join_results"] = end_sync_and_cache_join_results - start_sync_and_cache_join_results
-        self.global_state["michie"]["stats"]["async_join_results"] = end_async_join_results - start_async_join_results
-        self.global_state["michie"]["stats"]["async_works"] = async_works
-        self.global_state["michie"]["stats"]["sync_works"] = sync_works
-        self.global_state["michie"]["stats"]["cached_works"] = cached_works
+        self.global_state["michie"]["stats"][f"{operation_name}/work_build_time"] = end_work_build_time - start_work_build_time
+        self.global_state["michie"]["stats"][f"{operation_name}/sync_and_cache_join_results"] = end_sync_and_cache_join_results - start_sync_and_cache_join_results
+        self.global_state["michie"]["stats"][f"{operation_name}/async_join_results"] = end_async_join_results - start_async_join_results
+        self.global_state["michie"]["stats"][f"{operation_name}/async_works"] = async_works
+        self.global_state["michie"]["stats"][f"{operation_name}/sync_works"] = sync_works
+        self.global_state["michie"]["stats"][f"{operation_name}/cached_works"] = cached_works
         
         assert submit_queue.empty() and results_queue.empty()
     
