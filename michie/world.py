@@ -22,7 +22,7 @@ class World:
         self.cache = LRU(lru_cache_size)
         self.global_state = dict(
             tick=0,
-            michie=dict(stats=self.init_stats())
+            michie=dict(stats=dict())
         )
         self.objects = []
         self.dict_states = []
@@ -33,18 +33,6 @@ class World:
         self.window = None
         self.render_surface = None
     
-    def init_stats(self):
-        return dict(
-            global_mappers_execution_time=0,
-            transitions_submission_time=0,
-            transitions_retrieval_time=0,
-            transitions_works=0,
-            state_mappers_submission_time=0,
-            state_mappers_retrieval_time=0,
-            state_mappers_works=0,
-            render_time=0
-        )
-
     def add_object(self, object):
         assert isinstance(object, Object), "You can only add michie.Object instances"
         object.init["type"] = object.name
@@ -54,7 +42,6 @@ class World:
         for transition in object.transitions:
             if not transition.__name__ in self.transitions:
                 self.transitions[transition.__name__] = transition
-                #self.cache[f"transitions_{transition.__name__}"] = LRU(self.lru_cache_size)
             transitions_ids.append(transition.__name__)
         self.transitions_ids.append(transitions_ids)
 
@@ -62,7 +49,6 @@ class World:
         for state_mapper in object.state_mappers:
             if not state_mapper.__name__ in self.state_mappers:
                 self.state_mappers[state_mapper.__name__] = state_mapper
-                #self.cache[f"state_mappers_{state_mapper.__name__}"] = LRU(self.lru_cache_size)
             state_mappers_ids.append(state_mapper.__name__)
         self.state_mappers_ids.append(state_mappers_ids)
 
@@ -115,6 +101,7 @@ class World:
             )
     
     def run_works(self, *, operation, submit_queue, results_queue):
+        start_operation_time = time.time()
         assert operation == "transitions" or operation == "state_mappers"
         assert submit_queue.empty() and results_queue.empty()
 
@@ -193,12 +180,14 @@ class World:
                 self.cache[cache_key] = result["result"]
         end_async_join_results = time.time()
         
+        end_operation_time = time.time()
         self.global_state["michie"]["stats"][f"{operation_name}/work_build_time"] = end_work_build_time - start_work_build_time
         self.global_state["michie"]["stats"][f"{operation_name}/sync_and_cache_join_results"] = end_sync_and_cache_join_results - start_sync_and_cache_join_results
         self.global_state["michie"]["stats"][f"{operation_name}/async_join_results"] = end_async_join_results - start_async_join_results
         self.global_state["michie"]["stats"][f"{operation_name}/async_works"] = async_works
         self.global_state["michie"]["stats"][f"{operation_name}/sync_works"] = sync_works
         self.global_state["michie"]["stats"][f"{operation_name}/cached_works"] = cached_works
+        self.global_state["michie"]["stats"][f"{operation_name}_execution_time"] = end_operation_time - start_operation_time
         
         assert submit_queue.empty() and results_queue.empty()
     
@@ -258,6 +247,7 @@ class World:
         for hook in self.tick_hooks: hook.start(self.dict_states, self.global_state, window)
         
         for i in trange(0, max_ticks):
+            start_tick_time = time.time()
             self.run_global_mappers()
             self.run_works(operation="state_mappers", submit_queue=submit_queue, results_queue=results_queue)
             self.run_works(operation="transitions", submit_queue=submit_queue, results_queue=results_queue)
@@ -269,6 +259,8 @@ class World:
                 fps=render_fps,
                 background=render_background
             )
+            end_tick_time = time.time()
+            self.global_state["michie"]["stats"]["tick_time"] = end_tick_time - start_tick_time
             for hook in self.tick_hooks: hook.tick(self.dict_states, self.global_state, window)
         
         for hook in self.tick_hooks: hook.end(self.dict_states, self.global_state, window)
