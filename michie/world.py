@@ -3,7 +3,6 @@ from tqdm import trange
 import multiprocessing
 import time
 import orjson
-import xxhash
 import os
 from lru import LRU
 
@@ -131,24 +130,25 @@ class World:
         for id, (state, operation_ids) in enumerate(zip(self.dict_states, operations_ids)):
             for operation_id in operation_ids:
                 operation = operations[operation_id]
+                requirements = operation.requirements(state)
                 cache_key = ""
-                if hasattr(operation, "cache_key"):
+                if hasattr(operation, "cache_key") and requirements:
                     if issubclass(operation, Transition):
                         cache_key = ("transition", operation.__name__, operation.cache_key(state))
                     elif issubclass(operation, StateMapper):
                         cache_key = ("state-mapper", operation.__name__, operation.cache_key(state, self.global_state))
                     
-                    if cache_key in cache:
+                    if cache_key in self.cache:
                         cached_works += 1
                         results.append(dict(
                             id=id,
                             cache_key=cache_key,
                             cache_hit=1,
-                            result=cache[cache_key]
+                            result=self.cache[cache_key]
                         ))
                         continue
 
-                if (not FORCE_SYNC and not operation.sync()) and operation.requirements(state):
+                if (not FORCE_SYNC and not operation.sync()) and requirements:
                     async_works += 1
                     async_cache_keys[async_works] = cache_key
                     submit_queue.put(
@@ -160,7 +160,7 @@ class World:
                             state=state,
                         )
                     )
-                if (FORCE_SYNC or operation.sync()) and operation.requirements(state):
+                if (FORCE_SYNC or operation.sync()) and requirements:
                     sync_works += 1
                     results.append(dict(
                         id=id,
@@ -228,7 +228,8 @@ class World:
             render_surface=(800, 600),
             render_fps=None,
             render_background="black"
-        ):   
+        ):
+        if FORCE_SYNC: print("Warning: michie parallelism is disabled by MICHIE_FORCE_SYNC")
         if render:
             import pygame
             pygame.init()
