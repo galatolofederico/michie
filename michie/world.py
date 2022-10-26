@@ -6,6 +6,7 @@ import orjson
 import os
 from lru import LRU
 import flatdict
+import copy
 
 from michie.object import Object
 from michie.worker import Worker, Works
@@ -92,6 +93,9 @@ class World:
             raise e
     
     def run_sync_work(self, *, operation, id, state):
+        #TODO: sync forwarded state can contain references to the original state
+        #      breaking the transitions/mappers model
+        #      --> wrap forwarded states within a nested immutable dictionary 
         if issubclass(operation, Transition):
             return operation.transition(
                 operation.state_map(state)
