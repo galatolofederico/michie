@@ -259,8 +259,8 @@ class World:
         
         for i in trange(0, max_ticks):
             self.run_global_mappers()
-            self.run_works(operation="transitions", submit_queue=submit_queue, results_queue=results_queue)
             self.run_works(operation="state_mappers", submit_queue=submit_queue, results_queue=results_queue)
+            self.run_works(operation="transitions", submit_queue=submit_queue, results_queue=results_queue)
             self.global_state["tick"] += 1
 
             if render: self.render(
