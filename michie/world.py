@@ -13,6 +13,7 @@ from michie.mappers import StateMapper
 from michie.serialize import serialize, deserialize
 
 FORCE_SYNC = bool(os.environ.get("MICHIE_FORCE_SYNC", False))
+DISABLE_CACHE = bool(os.environ.get("MICHIE_DISABLE_CACHE", False))
 
 class World:
     def __init__(self, *, global_mappers=[], tick_hooks=[], lru_cache_size=10_000):
@@ -133,7 +134,7 @@ class World:
                 operation = operations[operation_id]
                 requirements = operation.requirements(state)
                 cache_key = ""
-                if hasattr(operation, "cache_key") and requirements:
+                if not DISABLE_CACHE and hasattr(operation, "cache_key") and requirements:
                     if issubclass(operation, Transition):
                         cache_key = ("transition", operation.__name__, operation.cache_key(state))
                     elif issubclass(operation, StateMapper):
@@ -231,6 +232,8 @@ class World:
             render_background="black"
         ):
         if FORCE_SYNC: print("Warning: michie parallelism is disabled by MICHIE_FORCE_SYNC")
+        if DISABLE_CACHE: print("Warning: michie cache is disabled by MICHIE_DISABLE_CACHE")
+        
         if render:
             import pygame
             pygame.init()
