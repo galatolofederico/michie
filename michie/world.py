@@ -5,6 +5,7 @@ import time
 import orjson
 import os
 from lru import LRU
+import flatdict
 
 from michie.object import Object
 from michie.worker import Worker, Works
@@ -14,11 +15,13 @@ from michie.serialize import serialize, deserialize
 
 FORCE_SYNC = bool(os.environ.get("MICHIE_FORCE_SYNC", False))
 DISABLE_CACHE = bool(os.environ.get("MICHIE_DISABLE_CACHE", False))
+STRICT_UPDATE = bool(os.environ.get("MICHIE_STRICT_UPDATE", False))
 
 class World:
-    def __init__(self, *, global_mappers=[], tick_hooks=[], lru_cache_size=10_000):
+    def __init__(self, *, global_mappers=[], tick_hooks=[], strict_update=False, lru_cache_size=10_000):
         self.global_mappers = global_mappers
         self.tick_hooks = tick_hooks
+        self.strict_update = strict_update or STRICT_UPDATE
         self.cache = LRU(lru_cache_size)
         self.global_state = dict(
             tick=0,
@@ -100,6 +103,20 @@ class World:
                 operation.global_state_map(self.global_state)
             )
     
+    def check_diff(self, current_state, update):
+        flat_current_state = flatdict.FlatDict(current_state)
+        flat_update = flatdict.FlatDict(update)
+        for current_key in flat_current_state.keys():
+            for update_key in flat_update.keys():
+                if current_key == update_key:
+                    print("Update overwrite detected!")
+                    print("Current state")
+                    print(flat_current_state)
+                    print("Overwriting update")
+                    print(flat_update) 
+                    print("Collision: ", current_key)
+                    exit(1)
+
     def run_works(self, *, operation, submit_queue, results_queue):
         start_operation_time = time.time()
         assert operation == "transitions" or operation == "state_mappers"
@@ -163,9 +180,16 @@ class World:
                     ))
         end_work_build_time = time.time()
 
+        if self.strict_update: states_updates = dict()
+
         start_sync_and_cache_join_results = time.time()
         for result in results:
-            self.dict_states[result["id"]].update(result["result"])  
+            if self.strict_update:
+                if result["id"] not in states_updates: states_updates[result["id"]] = dict()
+                self.check_diff(states_updates[result["id"]], result["result"])
+                states_updates[result["id"]].update(result["result"])
+            else:
+                self.dict_states[result["id"]].update(result["result"])  
             if result["cache_key"] != "" and not result["cache_hit"]:
                 self.cache[cache_key] = result["result"]
         end_sync_and_cache_join_results = time.time()
@@ -174,11 +198,21 @@ class World:
         for _ in range(0, async_works):
             result = results_queue.get()
             result = deserialize(result)
-            self.dict_states[result["id"]].update(result["result"])
+            if self.strict_update:
+                if result["id"] not in states_updates: states_updates[result["id"]] = dict()
+                self.check_diff(states_updates[result["id"]], result["result"])
+                states_updates[result["id"]].update(result["result"])
+            else:
+                self.dict_states[result["id"]].update(result["result"])  
             cache_key = async_cache_keys[result["work_id"]]
             if cache_key != "":
                 self.cache[cache_key] = result["result"]
         end_async_join_results = time.time()
+        
+        
+        if self.strict_update:
+            for key, update in states_updates.items():
+                self.dict_states[key].update(update)
         
         end_operation_time = time.time()
         self.global_state["michie"]["stats"][f"{operation_name}/work_build_time"] = end_work_build_time - start_work_build_time
