@@ -37,6 +37,7 @@ class Worker(multiprocessing.Process):
                 ].transition(work["args"]["state"])
 
             result = dict(
+                work_id=work["work_id"],
                 id=work["args"]["id"],
                 result=result,
             )

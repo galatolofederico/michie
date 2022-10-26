@@ -3,19 +3,23 @@ from tqdm import trange
 import multiprocessing
 import time
 import orjson
+import xxhash
 import os
+from lru import LRU
 
 from michie.object import Object
 from michie.worker import Worker, Works
+from michie.transitions import Transition
+from michie.mappers import StateMapper
 from michie.serialize import serialize, deserialize
 
 FORCE_SYNC = bool(os.environ.get("MICHIE_FORCE_SYNC", False))
 
 class World:
-    def __init__(self, *, global_mappers=[], tick_hooks=[], config=None):
-        self.config = config
+    def __init__(self, *, global_mappers=[], tick_hooks=[], lru_cache_size=10_000):
         self.global_mappers = global_mappers
         self.tick_hooks = tick_hooks
+        self.cache = LRU(lru_cache_size)
         self.global_state = dict(
             tick=0,
             michie=dict(stats=self.init_stats())
@@ -50,140 +54,152 @@ class World:
         for transition in object.transitions:
             if not transition.__name__ in self.transitions:
                 self.transitions[transition.__name__] = transition
+                #self.cache[f"transitions_{transition.__name__}"] = LRU(self.lru_cache_size)
             transitions_ids.append(transition.__name__)
         self.transitions_ids.append(transitions_ids)
 
         state_mappers_ids = []
-        for transition in object.state_mappers:
-            if not transition.__name__ in self.state_mappers:
-                self.state_mappers[transition.__name__] = transition
-            state_mappers_ids.append(transition.__name__)
+        for state_mapper in object.state_mappers:
+            if not state_mapper.__name__ in self.state_mappers:
+                self.state_mappers[state_mapper.__name__] = state_mapper
+                #self.cache[f"state_mappers_{state_mapper.__name__}"] = LRU(self.lru_cache_size)
+            state_mappers_ids.append(state_mapper.__name__)
         self.state_mappers_ids.append(state_mappers_ids)
 
         self.objects.append(object)
         self.dict_states.append(object.init)
 
-    def run_transitions(self, *, submit_queue, results_queue):
+    def make_async_work(self, *, work_id, id, operation, operation_id, state):
+        work = None
+        if issubclass(operation, Transition):
+            work = dict(
+                type = Works.STATE_TRANSITION.value,
+                work_id = work_id,
+                args = dict(
+                    id = id,
+                    state = operation.state_map(state),
+                    transition_id = operation_id,
+                ),
+            )
+        elif issubclass(operation, StateMapper):
+            work = dict(
+                type = Works.STATE_MAP.value,
+                work_id = work_id,
+                args = dict(
+                    id = id,
+                    state = operation.state_map(state),
+                    global_state = operation.global_state_map(self.global_state),
+                    state_mapper_id = operation_id
+                )
+            )
+        else:
+            raise Exception(f"Unknown operation {operation}")
+        
+        try:
+            return serialize(work)
+        except Exception as e:
+            print("Serialization error for work")
+            print(work)
+            raise e
+    
+    def run_sync_work(self, *, operation, id, state):
+        if issubclass(operation, Transition):
+            return operation.transition(
+                operation.state_map(state)
+            )
+        elif issubclass(operation, StateMapper):
+            return operation.map(
+                id,
+                operation.state_map(state),
+                operation.global_state_map(self.global_state)
+            )
+    
+    def run_works(self, *, operation, submit_queue, results_queue):
+        assert operation == "transitions" or operation == "state_mappers"
         assert submit_queue.empty() and results_queue.empty()
 
-        start_submission_time = time.time()
+        operations = self.transitions if operation == "transitions" else self.state_mappers
+        operations_ids = self.transitions_ids if operation == "transitions" else self.state_mappers_ids
+
         async_works = 0
-        for id, (state, transitions_ids) in enumerate(zip(self.dict_states, self.transitions_ids)):
-            for transition_id in transitions_ids:
-                transition = self.transitions[transition_id]
-                if (not FORCE_SYNC and not transition.sync()) and transition.requirements(state):
-                    work = dict(
-                        type = Works.STATE_TRANSITION.value,
-                        args = dict(
-                            id = id,
-                            state = transition.state_map(state),
-                            transition_id = transition_id
+        sync_works = 0
+        cached_works = 0
+        
+        results = []
+        async_cache_keys = dict()
+        start_work_build_time = time.time()
+        for id, (state, operation_ids) in enumerate(zip(self.dict_states, operations_ids)):
+            for operation_id in operation_ids:
+                operation = operations[operation_id]
+                cache_key = ""
+                if hasattr(operation, "cache_key"):
+                    if issubclass(operation, Transition):
+                        cache_key = ("transition", operation.__name__, operation.cache_key(state))
+                    elif issubclass(operation, StateMapper):
+                        cache_key = ("state-mapper", operation.__name__, operation.cache_key(state, self.global_state))
+                    
+                    if cache_key in cache:
+                        cached_works += 1
+                        results.append(dict(
+                            id=id,
+                            cache_key=cache_key,
+                            cache_hit=1,
+                            result=cache[cache_key]
+                        ))
+                        continue
+
+                if (not FORCE_SYNC and not operation.sync()) and operation.requirements(state):
+                    async_works += 1
+                    async_cache_keys[async_works] = cache_key
+                    submit_queue.put(
+                        self.make_async_work(
+                            work_id=async_works,
+                            id=id,
+                            operation=operation,
+                            operation_id=operation_id,
+                            state=state,
                         )
                     )
-                    try:
-                        submit_queue.put(serialize(work))
-                    except Exception as e:
-                        print("Serialization error for work")
-                        print(work)
-                        raise e
-                    
-                    async_works += 1
-        end_submission_time = time.time()
-
-        start_sync_time = time.time()
-        sync_works = 0
-        for id, (state, transitions_ids) in enumerate(zip(self.dict_states, self.transitions_ids)):
-            for transition_id in transitions_ids:
-                transition = self.transitions[transition_id]
-                if (FORCE_SYNC or transition.sync()) and transition.requirements(state):
-                    results_queue.put(dict(
-                        id=id,
-                        result=transition.transition(
-                            transition.state_map(state)
-                        ),
-                    ))
-                    
+                if (FORCE_SYNC or operation.sync()) and operation.requirements(state):
                     sync_works += 1
-        end_sync_time = time.time()
-        
-        start_retrieve_time = time.time()
-        for _ in range(0, sync_works + async_works):
-            result = results_queue.get()
-            if not isinstance(result, dict):
-                result = deserialize(result)
+                    results.append(dict(
+                        id=id,
+                        cache_key=cache_key,
+                        cache_hit=0,
+                        result=self.run_sync_work(
+                            id=id,
+                            operation=operation,
+                            state=state,
+                        )
+                    ))
+        end_work_build_time = time.time()
+
+        start_sync_and_cache_join_results = time.time()
+        for result in results:
             self.dict_states[result["id"]].update(result["result"])  
-        end_retrieve_time = time.time()
+            if result["cache_key"] != "" and not result["cache_hit"]:
+                self.cache[cache_key] = result["result"]
+        end_sync_and_cache_join_results = time.time()
 
-        self.global_state["michie"]["stats"]["transitions_submission_time"] = end_submission_time - start_submission_time
-        self.global_state["michie"]["stats"]["transitions_sync_time"] = end_sync_time - start_sync_time
-        self.global_state["michie"]["stats"]["transitions_retrieval_time"] = end_retrieve_time - start_retrieve_time
-        self.global_state["michie"]["stats"]["transitions_sync_works"] = sync_works
-        self.global_state["michie"]["stats"]["transitions_async_works"] = async_works
-
+        start_async_join_results = time.time()
+        for _ in range(0, async_works):
+            result = results_queue.get()
+            result = deserialize(result)
+            self.dict_states[result["id"]].update(result["result"])
+            cache_key = async_cache_keys[result["work_id"]]
+            if cache_key != "":
+                self.cache[cache_key] = result["result"]
+        end_async_join_results = time.time()
+        
+        self.global_state["michie"]["stats"]["work_build_time"] = end_work_build_time - start_work_build_time
+        self.global_state["michie"]["stats"]["sync_and_cache_join_results"] = end_sync_and_cache_join_results - start_sync_and_cache_join_results
+        self.global_state["michie"]["stats"]["async_join_results"] = end_async_join_results - start_async_join_results
+        self.global_state["michie"]["stats"]["async_works"] = async_works
+        self.global_state["michie"]["stats"]["sync_works"] = sync_works
+        self.global_state["michie"]["stats"]["cached_works"] = cached_works
+        
         assert submit_queue.empty() and results_queue.empty()
     
-    def run_state_mappers(self, *, submit_queue, results_queue):
-        assert submit_queue.empty() and results_queue.empty()
-
-        start_submission_time = time.time()
-        async_works = 0
-        for id, (state, state_mappers_ids) in enumerate(zip(self.dict_states, self.state_mappers_ids)):
-            for state_mapper_id in state_mappers_ids:
-                mapper = self.state_mappers[state_mapper_id]
-                if (not FORCE_SYNC and not mapper.sync()) and mapper.requirements(state):
-                    work = dict(
-                        type = Works.STATE_MAP.value,
-                        args = dict(
-                            id = id,
-                            state = mapper.state_map(state),
-                            global_state = mapper.global_state_map(self.global_state),
-                            state_mapper_id = state_mapper_id
-                        )
-                    )
-                    try:
-                        submit_queue.put(serialize(work))
-                    except Exception as e:
-                        print("Serialization error for work")
-                        print(work)
-                        raise e
-
-                    async_works += 1
-        end_submission_time = time.time()
-
-        start_sync_time = time.time()
-        sync_works = 0
-        for id, (state, state_mappers_ids) in enumerate(zip(self.dict_states, self.state_mappers_ids)):
-            for state_mapper_id in state_mappers_ids:
-                mapper = self.state_mappers[state_mapper_id]
-                if (FORCE_SYNC or mapper.sync()) and mapper.requirements(state):
-                    results_queue.put(dict(
-                        id=id,
-                        result=mapper.map(
-                            id,
-                            mapper.state_map(state),
-                            mapper.global_state_map(self.global_state)
-                        )
-                    ))
-                    
-                    sync_works += 1
-        end_sync_time = time.time()
-
-        start_retrieve_time = time.time()
-        for _ in range(0, async_works + sync_works):
-            result = results_queue.get()
-            if not isinstance(result, dict):
-                result = deserialize(result)
-            self.dict_states[result["id"]].update(result["result"])  
-        end_retrieve_time = time.time()
-
-        self.global_state["michie"]["stats"]["state_mappers_submission_time"] = end_submission_time - start_submission_time
-        self.global_state["michie"]["stats"]["state_mappers_sync_time"] = end_sync_time - start_sync_time
-        self.global_state["michie"]["stats"]["state_mappers_retrieval_time"] = end_retrieve_time - start_retrieve_time
-        self.global_state["michie"]["stats"]["state_mappers_sync_works"] = sync_works
-        self.global_state["michie"]["stats"]["state_mappers_async_works"] = async_works
-
-        assert submit_queue.empty() and results_queue.empty()
-
     def run_global_mappers(self):
         start_time = time.time()
         for global_mapper in self.global_mappers:
@@ -238,8 +254,8 @@ class World:
         
         for i in trange(0, max_ticks):
             self.run_global_mappers()
-            self.run_state_mappers(submit_queue=submit_queue, results_queue=results_queue)
-            self.run_transitions(submit_queue=submit_queue, results_queue=results_queue)
+            self.run_works(operation="transitions", submit_queue=submit_queue, results_queue=results_queue)
+            self.run_works(operation="state_mappers", submit_queue=submit_queue, results_queue=results_queue)
             self.global_state["tick"] += 1
 
             if render: self.render(

@@ -20,7 +20,8 @@ setuptools.setup(
         "numpy>=1.23.4",
         "schema>=0.7.5",
         "scipy>=1.9.2",
-        "orjson>=3.8.0"
+        "orjson>=3.8.0",
+        "lru-dict==1.1.8"
     ],
     classifiers=[
         "Programming Language :: Python :: 3.8",
