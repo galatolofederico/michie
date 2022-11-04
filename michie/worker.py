@@ -1,52 +1,75 @@
 import multiprocessing
 from enum import Enum
 
-from michie.serialize import serialize, deserialize
-
-class Works(Enum):
-    EXIT = 0
-    STATE_MAP = 1
-    STATE_TRANSITION = 2
-
+from michie.messages import send_msg, recv_msg
+from michie.messages import Commands
 
 class Worker(multiprocessing.Process):
-    def __init__(self, *, id, submit_queue, results_queue, state_mappers, transitions):
+    def __init__(self, *, id, submit_queue, results_queue, retrieve_map_state):
         super(Worker, self).__init__()
         self.id = id
         self.submit_queue = submit_queue
         self.results_queue = results_queue
-        self.state_mappers = state_mappers
-        self.transitions = transitions
+        self.retrieve_map_state = retrieve_map_state
+        self.objects = []
+        self.dict_states = []
+
+    def tick(self, global_state):
+        for object, state in zip(self.objects, self.dict_states):
+            for state_mapper in object.state_mappers:
+                mapped_global_state = state_mapper.mapped_global_state(global_state)
+                mapped_state = state_mapper.state_map(state)
+                state.update(state_mapper.map(
+                    object.id,
+                    mapped_state,
+                    mapped_global_state
+                ))
+            
+            for transition in object.transitions:
+                mapped_state = transition.state_map(state)
+                state.update(transition.transition(mapped_state))
+        
+        send_msg(
+            to=self.results_queue,
+            serialize=False,
+            msg=dict(
+                cmd=Commands.TICK_DONE.value,
+            )
+        )
+
+    def retrieve_state(self):
+        states = []
+        for object, state in zip(self.objects, self.dict_states):
+            states.append(dict(
+                worker_id=self.id,
+                object_id=object.id,
+                state=self.retrieve_map_state(state)
+            ))
+        
+        send_msg(
+            to=self.results_queue,
+            serialize=True,
+            msg=dict(
+                cmd=Commands.STATE.value,
+                args=dict(
+                    states=states
+                )
+            )
+        )
 
     def run(self):
         while True:
-            work = self.submit_queue.get()
-            work = deserialize(work)
-            
-            result = None
-            if work["type"] == Works.EXIT.value:
-                return
-            if work["type"] == Works.STATE_MAP.value:
-                result = self.state_mappers[
-                    work["args"]["state_mapper_id"]
-                ].map(work["args"]["id"], work["args"]["state"], work["args"]["global_state"])
-
-            if work["type"] == Works.STATE_TRANSITION.value:
-                result = self.transitions[
-                    work["args"]["transition_id"]
-                ].transition(work["args"]["state"])
-
-            result = dict(
-                work_id=work["work_id"],
-                id=work["args"]["id"],
-                result=result,
-            )
-            try:
-                result = serialize(result)
-            except Exception as e:
-                print("Serialization error for result")
-                print(result)
-                print("from work")
-                print(work)
-                raise e
-            self.results_queue.put(result)
+            cmd = recv_msg(self.submit_queue) 
+            args = cmd["args"]
+            cmd = cmd["cmd"]
+            if cmd == Commands.ADD_OBJECT.value:
+                self.objects.append(args["object"])
+                self.dict_states.append(args["object"].init)
+            elif cmd == Commands.DO_TICK.value:
+                self.tick(global_state=args["global_state"])
+            elif cmd == Commands.RETRIEVE_STATE.value:
+                self.retrieve_state()
+            elif cmd == Commands.EXIT.value:
+                exit()
+            else:
+                raise Exception(f"Unknown command {cmd}")

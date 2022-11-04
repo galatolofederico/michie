@@ -51,13 +51,12 @@ def add_drone(world, color):
 
 world = michie.World()
 
-for _ in range(0, 50): add_drone(world, "red")
-for _ in range(0, 50): add_drone(world, "green")
-for _ in range(0, 50): add_drone(world, "blue")
+for _ in range(0, 500): add_drone(world, "red")
+for _ in range(0, 500): add_drone(world, "green")
+for _ in range(0, 500): add_drone(world, "blue")
 
 world.run(
     max_ticks=1000,
-    workers=os.cpu_count(),
     render=True,
     render_fps=30,
     render_surface=(800, 600)

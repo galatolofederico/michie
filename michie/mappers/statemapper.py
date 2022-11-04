@@ -10,11 +10,11 @@ class StateMapper:
         return True
 
     @classmethod
-    def map_state(cls, state):
+    def state_map(cls, state):
         raise NotImplementedError()
     
     @classmethod
-    def map_global_state(cls, state):
+    def global_state_map(cls, state):
         raise NotImplementedError()
     
     @classmethod
