@@ -52,7 +52,6 @@ class World:
                 results_queue=results_queue,
                 retrieve_map_state=self.retrieve_map_state
             )
-            worker.start()
 
             self.workers.append(dict(
                 submit_queue=submit_queue,
@@ -66,29 +65,43 @@ class World:
         object.id = len(self.objects)
         object.init["id"] = object.id
 
-        #self.workers[self.current_submit_worker].add_object(object)
-        
-        send_msg(
-            to=self.workers[self.current_submit_worker],
-            serialize=False,
-            msg=dict(
-                cmd=Commands.ADD_OBJECT.value,
-                args=dict(
-                    object=object
-                )
-            )
-        )
+        self.workers[self.current_submit_worker]["worker"].add_object(object)
         self.objects.append(object)
 
         self.current_submit_worker = (self.current_submit_worker + 1) % len(self.workers)
     
     def run_global_mappers(self, states):
         current_states = [s["state"] for s in states]
+        workers_ids = [s["worker_id"] for s in states]
+        objects_ids = [s["object_id"] for s in states]
+        
         for global_mapper in self.global_mappers:
             current_states = global_mapper.map(current_states, self.global_state) 
         
-        print(current_states)
-        exit()
+        workers_states = dict()
+        for worker_id, object_id, state in zip(workers_ids, objects_ids, current_states):
+            if not worker_id in workers_states: workers_states[worker_id] = []
+            workers_states[worker_id].append(dict(
+                object_id=object_id,
+                state=state
+            ))
+ 
+        for worker_id, states in workers_states.items():
+            send_msg(
+                to=self.workers[worker_id],
+                serialize=True,
+                msg=dict(
+                    cmd=Commands.SET_STATE.value,
+                    args=dict(
+                        states=states
+                    )
+                )
+            )
+        
+        for worker in self.workers:
+            reply = recv_msg(worker)
+            assert reply["cmd"] == Commands.STATE_SET.value
+
 
     def workers_tick(self):
         for worker in self.workers:
@@ -150,6 +163,8 @@ class World:
             render_background="black"
         ):
         
+        for worker in self.workers: worker["worker"].start()
+
         if render:
             import pygame
             pygame.init()

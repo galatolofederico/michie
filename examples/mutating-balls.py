@@ -115,7 +115,6 @@ for _ in range(0, 100): add_fixed_ball(world, "blue")
 
 world.run(
     max_ticks=1000,
-    workers=os.cpu_count(),
     render=True,
     render_fps=1_00,
     render_surface=(800, 600)

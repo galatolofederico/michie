@@ -10,7 +10,6 @@ class DistancesGlobalMapper(GlobalMapper):
         dists = scipy.spatial.distance.pdist(positions, "euclidean")
         dists = scipy.spatial.distance.squareform(dists)
         
-        for state, dist in zip(states, dists):
-            state["distances"] = dist.tolist()
+        global_state["distances"] = dists.tolist()
 
         return states

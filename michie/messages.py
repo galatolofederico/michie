@@ -5,12 +5,12 @@ from michie.serialize import deserialize as do_deserialize
 
 
 class Commands(Enum):
-    ADD_OBJECT = 0
-    DO_TICK = 1
-    TICK_DONE = 2
-    RETRIEVE_STATE = 3
-    STATE = 4
-    SET_STATE = 5
+    DO_TICK = 0
+    TICK_DONE = 1
+    RETRIEVE_STATE = 2
+    STATE = 3
+    SET_STATE = 4
+    STATE_SET = 5
     EXIT = 6
 
 def send_msg(*, to, serialize, msg):

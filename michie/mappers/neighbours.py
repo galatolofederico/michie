@@ -17,7 +17,7 @@ class NeighboursGlobalMapper(GlobalMapper):
 
     def map(self, states, global_state):
         for id, state in enumerate(states):
-            dists = state["distances"]
+            dists = global_state["distances"][id]
             other_dists = np.concatenate((dists[:id], dists[id+1:]))
             other_states = states[:id] + states[id+1:]
 
