@@ -12,7 +12,7 @@ from michie.object import Object
 from michie.worker import Worker
 from michie.transitions import Transition
 from michie.mappers import StateMapper
-from michie.messages import Commands, send_msg, recv_msg
+from michie.messages import Command, Serializer, send_msg, recv_msg
 
 
 class World:
@@ -89,9 +89,9 @@ class World:
         for worker_id, states in workers_states.items():
             send_msg(
                 to=self.workers[worker_id],
-                serialize=True,
+                serializer=Serializer.ORJSON.value,
                 msg=dict(
-                    cmd=Commands.SET_STATE.value,
+                    cmd=Command.SET_STATE.value,
                     args=dict(
                         states=states
                     )
@@ -100,16 +100,16 @@ class World:
         
         for worker in self.workers:
             reply = recv_msg(worker)
-            assert reply["cmd"] == Commands.STATE_SET.value
+            assert reply["cmd"] == Command.STATE_SET.value
 
 
     def workers_tick(self):
         for worker in self.workers:
             send_msg(
                 to=worker,
-                serialize=True,
+                serializer=Serializer.ORJSON.value,
                 msg=dict(
-                    cmd=Commands.DO_TICK.value,
+                    cmd=Command.DO_TICK.value,
                     args=dict(
                         global_state=self.submit_map_global_state(self.global_state)
                     )
@@ -118,23 +118,23 @@ class World:
         
         for worker in self.workers:
             reply = recv_msg(worker)
-            assert reply["cmd"] == Commands.TICK_DONE.value
+            assert reply["cmd"] == Command.TICK_DONE.value
 
     def retrieve_states(self):
         states = []
         for worker in self.workers:
             send_msg(
                 to=worker,
-                serialize=False,
+                serializer=Serializer.ORJSON.value,
                 msg=dict(
-                    cmd=Commands.RETRIEVE_STATE.value,
+                    cmd=Command.RETRIEVE_STATE.value,
                     args=dict()
                 )
             )
         
         for worker in self.workers:
             worker_states = recv_msg(worker)
-            assert worker_states["cmd"] == Commands.STATE.value
+            assert worker_states["cmd"] == Command.STATE.value
             for worker_state in worker_states["args"]["states"]:
                 states.append(worker_state)
         
@@ -198,9 +198,9 @@ class World:
         for worker in self.workers:
             send_msg(
                 to=worker,
-                serialize=False,
+                serializer=Serializer.ORJSON.value,
                 msg=dict(
-                    cmd=Commands.EXIT.value,
+                    cmd=Command.EXIT.value,
                     args=dict()
                 )
             )

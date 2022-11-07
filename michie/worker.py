@@ -2,7 +2,7 @@ import multiprocessing
 from enum import Enum
 
 from michie.messages import send_msg, recv_msg
-from michie.messages import Commands
+from michie.messages import Command, Serializer
 
 class Worker(multiprocessing.Process):
     def __init__(self, *, id, submit_queue, results_queue, retrieve_map_state):
@@ -36,9 +36,9 @@ class Worker(multiprocessing.Process):
         
         send_msg(
             to=self.results_queue,
-            serialize=False,
+            serializer=Serializer.ORJSON.value,
             msg=dict(
-                cmd=Commands.TICK_DONE.value,
+                cmd=Command.TICK_DONE.value,
             )
         )
 
@@ -53,9 +53,9 @@ class Worker(multiprocessing.Process):
         
         send_msg(
             to=self.results_queue,
-            serialize=True,
+            serializer=Serializer.ORJSON.value,
             msg=dict(
-                cmd=Commands.STATE.value,
+                cmd=Command.STATE.value,
                 args=dict(
                     states=states
                 )
@@ -68,9 +68,9 @@ class Worker(multiprocessing.Process):
         
         send_msg(
             to=self.results_queue,
-            serialize=False,
+            serializer=Serializer.ORJSON.value,
             msg=dict(
-                cmd=Commands.STATE_SET.value,
+                cmd=Command.STATE_SET.value,
                 args=dict()
             )
         )
@@ -80,13 +80,13 @@ class Worker(multiprocessing.Process):
             cmd = recv_msg(self.submit_queue) 
             args = cmd["args"]
             cmd = cmd["cmd"]
-            if cmd == Commands.DO_TICK.value:
+            if cmd == Command.DO_TICK.value:
                 self.tick(global_state=args["global_state"])
-            elif cmd == Commands.RETRIEVE_STATE.value:
+            elif cmd == Command.RETRIEVE_STATE.value:
                 self.retrieve_state()
-            elif cmd == Commands.SET_STATE.value:
+            elif cmd == Command.SET_STATE.value:
                 self.set_states(states=args["states"])
-            elif cmd == Commands.EXIT.value:
+            elif cmd == Command.EXIT.value:
                 exit()
             else:
                 raise Exception(f"Unknown command {cmd}")

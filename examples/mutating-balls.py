@@ -102,6 +102,7 @@ def add_mutating_ball(world):
     world.add_object(MutatingBall)
 
 world = michie.World(
+    submit_map_global_state=lambda s: None,
     global_mappers=[
         michie.mappers.DistancesGlobalMapper(),
         michie.mappers.NeighboursGlobalMapper(radius=100)
