@@ -26,7 +26,7 @@ class MutateTransition(michie.Transition):
             return dict(
                 color=color
             )
-        
+
         return dict()
 
 class FilterNeighboursMapper(michie.StateMapper):
@@ -101,11 +101,23 @@ def add_mutating_ball(world):
 
     world.add_object(MutatingBall)
 
+def neighbour_beacon(state):
+    beacon = state.copy()
+    if "neighbours" in beacon: del beacon["neighbours"]
+    return dict(
+        position=state["position"],
+        type=state["type"],
+        color=state["color"]
+    )
+
+
 world = michie.World(
-    submit_map_global_state=lambda s: None,
     global_mappers=[
         michie.mappers.DistancesGlobalMapper(),
-        michie.mappers.NeighboursGlobalMapper(radius=100)
+        michie.mappers.NeighboursGlobalMapper(
+            radius=100,
+            beacon=neighbour_beacon
+        )
     ],
 )
 

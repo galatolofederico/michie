@@ -19,21 +19,12 @@ class Worker(multiprocessing.Process):
         self.objects[object.id] = object
         self.states[object.id] = object.init
 
-    def tick(self, global_state):
+    def tick(self):
         for object, state in zip(self.objects.values(), self.states.values()):
-            for state_mapper in object.state_mappers:
-                mapped_global_state = state_mapper.global_state_map(global_state)
-                mapped_state = state_mapper.state_map(state)
-                state.update(state_mapper.map(
-                    object.id,
-                    mapped_state,
-                    mapped_global_state
-                ))
-            
             for transition in object.transitions:
                 mapped_state = transition.state_map(state)
                 state.update(transition.transition(mapped_state))
-        
+
         send_msg(
             to=self.results_queue,
             serializer=Serializer.ORJSON.value,
@@ -81,7 +72,7 @@ class Worker(multiprocessing.Process):
             args = cmd["args"]
             cmd = cmd["cmd"]
             if cmd == Command.DO_TICK.value:
-                self.tick(global_state=args["global_state"])
+                self.tick()
             elif cmd == Command.RETRIEVE_STATE.value:
                 self.retrieve_state()
             elif cmd == Command.SET_STATE.value:

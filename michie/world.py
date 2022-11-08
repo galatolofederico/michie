@@ -22,7 +22,6 @@ class World:
             workers=-1,
             global_mappers=[],
             retrieve_map_state=None,
-            submit_map_global_state=None,
             tick_hooks=[],
             strict_update=False,
             lru_cache_size=10_000
@@ -30,10 +29,11 @@ class World:
         self.num_workers = workers if workers > 0 else os.cpu_count()
         self.global_mappers = global_mappers
         self.retrieve_map_state = retrieve_map_state if retrieve_map_state is not None else lambda g: g
-        self.submit_map_global_state = submit_map_global_state if submit_map_global_state is not None else lambda g: g
         self.tick_hooks = tick_hooks
         
         self.global_state = dict(tick=0)
+        self.stats = dict()
+        self.timings = dict()
         self.window = None
         self.render_surface = None
         self.objects = []
@@ -72,12 +72,36 @@ class World:
     
     def run_global_mappers(self, states):
         current_states = [s["state"] for s in states]
-        workers_ids = [s["worker_id"] for s in states]
-        objects_ids = [s["object_id"] for s in states]
-        
         for global_mapper in self.global_mappers:
             current_states = global_mapper.map(current_states, self.global_state) 
         
+        for state, current_state in zip(states, current_states):
+            state["state"] = current_state
+
+        return states
+
+    def run_state_mappers(self, states):
+        current_states = [s["state"] for s in states]
+        for object, state in zip(self.objects, current_states):
+            for state_mapper in object.state_mappers:
+                mapped_global_state = state_mapper.global_state_map(self.global_state)
+                mapped_state = state_mapper.state_map(state)
+                state.update(state_mapper.map(
+                    object.id,
+                    mapped_state,
+                    mapped_global_state
+                ))
+
+        for state, current_state in zip(states, current_states):
+            state["state"] = current_state
+
+        return states
+
+    def workers_tick(self, states):
+        current_states = [s["state"] for s in states]
+        workers_ids = [s["worker_id"] for s in states]
+        objects_ids = [s["object_id"] for s in states]
+
         workers_states = dict()
         for worker_id, object_id, state in zip(workers_ids, objects_ids, current_states):
             if not worker_id in workers_states: workers_states[worker_id] = []
@@ -85,7 +109,7 @@ class World:
                 object_id=object_id,
                 state=state
             ))
- 
+
         for worker_id, states in workers_states.items():
             send_msg(
                 to=self.workers[worker_id],
@@ -95,29 +119,27 @@ class World:
                     args=dict(
                         states=states
                     )
-                )
+                ),
+                stats=self.stats
             )
-        
+
         for worker in self.workers:
-            reply = recv_msg(worker)
+            reply = recv_msg(worker, stats=self.stats)
             assert reply["cmd"] == Command.STATE_SET.value
 
-
-    def workers_tick(self):
         for worker in self.workers:
             send_msg(
                 to=worker,
                 serializer=Serializer.ORJSON.value,
                 msg=dict(
                     cmd=Command.DO_TICK.value,
-                    args=dict(
-                        global_state=self.submit_map_global_state(self.global_state)
-                    )
-                )
+                    args=dict()
+                ),
+                stats=self.stats
             )
         
         for worker in self.workers:
-            reply = recv_msg(worker)
+            reply = recv_msg(worker, stats=self.stats)
             assert reply["cmd"] == Command.TICK_DONE.value
 
     def retrieve_states(self):
@@ -129,11 +151,12 @@ class World:
                 msg=dict(
                     cmd=Command.RETRIEVE_STATE.value,
                     args=dict()
-                )
+                ),
+                stats=self.stats
             )
         
         for worker in self.workers:
-            worker_states = recv_msg(worker)
+            worker_states = recv_msg(worker, stats=self.stats)
             assert worker_states["cmd"] == Command.STATE.value
             for worker_state in worker_states["args"]["states"]:
                 states.append(worker_state)
@@ -173,14 +196,17 @@ class World:
             if render_fps is not None:
                 clock = pygame.time.Clock()
 
-        for hook in self.tick_hooks: hook.start(self.dict_states, self.global_state, window)
+        states = self.retrieve_states()
+        for hook in self.tick_hooks: hook.start([s["state"] for s in states], self.global_state, window)
         
         for i in trange(0, max_ticks):
             self.global_state["tick"] += 1
 
-            states = self.retrieve_states()
-            self.run_global_mappers(states)
-            self.workers_tick()
+            if i != 0: states = self.retrieve_states()
+            states = self.run_global_mappers(states)
+            states = self.run_state_mappers(states)
+
+            self.workers_tick(states)
             
             if render: self.render(
                 states=states,
@@ -190,10 +216,9 @@ class World:
                 background=render_background
             )
 
-            for hook in self.tick_hooks: hook.tick(self.dict_states, self.global_state, window)
-            
-        
-        for hook in self.tick_hooks: hook.end(self.dict_states, self.global_state, window)
+            for hook in self.tick_hooks: hook.tick([s["state"] for s in states], self.global_state, window)
+
+        for hook in self.tick_hooks: hook.end([s["state"] for s in states], self.global_state, window)
         
         for worker in self.workers:
             send_msg(
@@ -202,6 +227,7 @@ class World:
                 msg=dict(
                     cmd=Command.EXIT.value,
                     args=dict()
-                )
+                ),
+                stats=self.stats
             )
         

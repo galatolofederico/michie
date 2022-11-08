@@ -6,3 +6,5 @@ __pycache__/
 /michie.egg-info
 
 /.vscode
+/.kdev4
+*.kdev4

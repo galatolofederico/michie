@@ -26,12 +26,27 @@ def deserialize(serializer, bytes):
     else:
         raise Exception("Unknown serializer")
 
+
+def update_stats(*, stats, cmd, size, scope):
+    cmd = Command(cmd).name
+    if scope not in stats: stats[scope] = dict()
+    if cmd not in stats[scope]: stats[scope][cmd] = dict(min=0,max=0,mean=0)
+    s = stats[scope][cmd]
+
+    alpha = 0.001
+    if size < s["min"]: s["min"] = size
+    if size > s["max"]: s["max"] = size
+    s["mean"] = (1-alpha)*s["mean"] + alpha*size
+    
+
+
 def send_msg(*, to, serializer, msg, stats=None):
     cmd = msg["cmd"]
     serialized = serialize(serializer, msg)
     if type(to) is dict: to = to["submit_queue"]
 
     if stats is not None: update_stats(
+        stats = stats,
         cmd = cmd,
         size = len(serialized),
         scope = "send"
@@ -45,6 +60,7 @@ def recv_msg(fr, stats=None):
     cmd = deserialized["cmd"]
     
     if stats is not None: update_stats(
+        stats = stats,
         cmd = cmd,
         size = len(msg),
         scope = "receive"
